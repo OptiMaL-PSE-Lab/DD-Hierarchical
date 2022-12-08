@@ -72,7 +72,7 @@ print('Num constraints:' , report.activated.constraints)
 print('Num variables: ', report.activated.variables)
 solver = pyo.SolverFactory('ipopt')
 solver.options['max_iter'] = 6000
-results =  solver.solve(m,tee=True).write()
+results =  solver.solve(m).write()
 
 #Saving Data
 data = {v.getname(): dict() for v in m.component_objects(pyo.Var)}   
@@ -106,5 +106,6 @@ ax1[1].set_ylabel('Control profile $\\rm[uU/\ h.m^3]$')
 ax1[1].set_xlabel('Time $\\rm[h]$')
 ax1[1].yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
 ax1[1].legend()
+plt.show()
 # fig1.savefig('Random_kinetics.png', dpi = 600,format = 'png',bbox_inches  = 'tight')  
 print(m.tf())

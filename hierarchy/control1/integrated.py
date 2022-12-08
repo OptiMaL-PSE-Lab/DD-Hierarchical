@@ -318,7 +318,9 @@ discretizer.apply_to(m, nfe=10, ncp=4)
 #Piecewise Control "
 discretizer.reduce_collocation_points(m, var = m.u , ncp =1, contset =m.tau)
 
-solver = pyo.SolverFactory('Bonmin')
+# solver = pyo.SolverFactory('Bonmin')
+solver = pyo.SolverFactory('gdpopt')
+# solver = pyo.SolverFactory('cplex')
 solver.solve(m, tee = True).write()
 
 #Results

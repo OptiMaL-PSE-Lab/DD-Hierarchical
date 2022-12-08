@@ -2,11 +2,14 @@ import pyomo.environ as pyo
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+
 # import tensorflow as tf
 
+import onnx
 from omlt import OmltBlock, OffsetScaling
 from omlt.neuralnet import FullSpaceNNFormulation, NetworkDefinition
-from omlt.io import load_keras_sequential
+from omlt.io import load_onnx_neural_network
+
 from omlt.neuralnet import ReluBigMFormulation
 
 data3 = {
@@ -109,7 +112,12 @@ for s in STATES:
     buy_p[s]  = STATES[s]['b_price']
     
 # NN_Parameters
-df = pd.read_csv('Batch_Reactor_NN')
+try:
+    dir = './data/CS1_sampling/Batch_Reactor_NN'
+    df = pd.read_csv(dir) 
+except:
+    dir = '../data/CS1_sampling/Batch_Reactor_NN'
+    df = pd.read_csv(dir) 
 inputs = ['volume']
 outputs = ['tf','utility']
 
@@ -156,8 +164,8 @@ m.STin = pyo.Var(m.STATES, domain = pyo.NonNegativeReals)
 #Linking Variables outputs of the neural network
 m.Q  = pyo.Var(['Reaction'], ['Reactor'], m.EVENTS)
 m.tf = pyo.Var(m.UNITS, m.EVENTS, domain = pyo.NonNegativeReals, bounds=(0,H))
-#Loading NN
-nn = tf.keras.models.load_model('Batch_Reactor_NN_Relu_f', compile=False)
+# #Loading NN
+# nn = tf.keras.models.load_model('Batch_Reactor_NN_Relu_f', compile=False)
 #Create an OMLT block
 m.NN_0 = OmltBlock()
 m.NN_1 = OmltBlock()
@@ -169,7 +177,13 @@ m.NN_4 = OmltBlock()
 # m.NN_7 = OmltBlock()
 
 # create a network definition from the Keras model
-net = load_keras_sequential(nn,scaler,scaled_input_bounds)
+try:
+    dir = './results/Models/CS1_ReLU.onnx'
+    onnx_model = onnx.load(dir)
+except:
+    dir = '../results/Models/CS1_ReLU.onnx'
+    onnx_model = onnx.load(dir)
+net = load_onnx_neural_network(onnx_model, scaler, scaled_input_bounds)
 
 
 # Specify NN Formulation
@@ -343,7 +357,7 @@ for s in m.STATES:
 rhs -= sum(m.Q_schedule['Reaction','Reactor',n] for n in m.EVENTS) 
         
 m.objective = pyo.Objective( expr = rhs, sense = pyo.maximize) 
-solver = pyo.SolverFactory('gurobi', tee = True)
+solver = pyo.SolverFactory('gurobi_direct', tee = True)
 solver.solve(m).write()
 
 #Results

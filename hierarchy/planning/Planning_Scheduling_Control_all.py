@@ -28,6 +28,13 @@ from omlt.neuralnet import ReluBigMFormulation
 from data.planning.planning_sch_bilevel import data as import_data
 from data.planning.planning_sch_bilevel import scheduling_data
 
+def state_to_control_t(t, N_t, T_set):
+    dummy_array = np.arange(1, 1+N_t)
+    N_total = len(T_set)
+    T_min = T_set[0]
+    idx = 1 + (t - T_min) // int(N_total/N_t)
+    return min(idx, N_t)
+
 try:
     dir = './data/CS2_Sampling/Batch_Reactor_NN_PA'
     df = pd.read_csv(dir) 
@@ -59,14 +66,6 @@ scaler = OffsetScaling(
         factor_outputs={i: y_factor[outputs[i]] for i in range(len(outputs))}
     )
 
-
-def state_to_control_t(t, N_t, T_set):
-    dummy_array = np.arange(1, 1+N_t)
-    N_total = len(T_set)
-    T_min = T_set[0]
-    idx = 1 + (t - T_min) // int(N_total/N_t)
-    return min(idx, N_t)
-
 try:
     dir = './results/Models/CS2_ReLU_PA.onnx'
     onnx_model = onnx.load(dir)
@@ -74,6 +73,160 @@ except:
     dir = '../results/Models/CS2_ReLU_PA.onnx'
     onnx_model = onnx.load(dir)
 net = load_onnx_neural_network(onnx_model, scaler, scaled_input_bounds)
+
+
+try:
+    dir = './data/CS2_Sampling/Batch_Reactor_NN_PB'
+    df = pd.read_csv(dir) 
+except:
+    dir = '../data/CS2_Sampling/Batch_Reactor_NN_PB'
+    df = pd.read_csv(dir)
+
+dfin_PB = df[inputs]
+dfout_PB = df[outputs]
+
+#Scaling
+x_offset, x_factor = dfin_PB.mean().to_dict(), dfin_PB.std().to_dict()
+y_offset, y_factor = dfout_PB.mean().to_dict(), dfout_PB.std().to_dict()
+
+dfin_PB = (dfin_PB - dfin_PB.mean()).divide(dfin_PB.std())
+dfout_PB = (dfout_PB - dfout_PB.mean()).divide(dfout_PB.std())
+
+#Save the scaling parameters of the inputs for OMLT
+scaled_lb = dfin_PB.min()[inputs].values
+scaled_ub = dfin_PB.max()[inputs].values
+scaled_input_bounds_PB = {i: (scaled_lb[i], scaled_ub[i]) for i in range(len(inputs))}
+# scaling factors
+scaler_PB = OffsetScaling(
+        offset_inputs={i: x_offset[inputs[i]] for i in range(len(inputs))},
+        factor_inputs={i: x_factor[inputs[i]] for i in range(len(inputs))},
+        offset_outputs={i: y_offset[outputs[i]] for i in range(len(outputs))},
+        factor_outputs={i: y_factor[outputs[i]] for i in range(len(outputs))}
+    )
+
+try:
+    dir = './results/Models/CS2_ReLU_PB.onnx'
+    onnx_model = onnx.load(dir)
+except:
+    dir = '../results/Models/CS2_ReLU_PB.onnx'
+    onnx_model = onnx.load(dir)
+net_PB = load_onnx_neural_network(onnx_model, scaler_PB, scaled_input_bounds_PB)
+
+
+try:
+    dir = './data/CS2_Sampling/Batch_Reactor_NN_TEE'
+    df = pd.read_csv(dir) 
+except:
+    dir = '../data/CS2_Sampling/Batch_Reactor_NN_TEE'
+    df = pd.read_csv(dir)
+
+dfin_TEE = df[inputs]
+dfout_TEE = df[outputs]
+
+#Scaling
+x_offset, x_factor = dfin_TEE.mean().to_dict(), dfin_TEE.std().to_dict()
+y_offset, y_factor = dfout_TEE.mean().to_dict(), dfout_TEE.std().to_dict()
+
+dfin_TEE = (dfin_TEE - dfin_TEE.mean()).divide(dfin_TEE.std())
+dfout_TEE = (dfout_TEE - dfout_TEE.mean()).divide(dfout_TEE.std())
+
+#Save the scaling parameters of the inputs for OMLT
+scaled_lb = dfin_TEE.min()[inputs].values
+scaled_ub = dfin_TEE.max()[inputs].values
+scaled_input_bounds_TEE = {i: (scaled_lb[i], scaled_ub[i]) for i in range(len(inputs))}
+# scaling factors
+scaler_TEE = OffsetScaling(
+        offset_inputs={i: x_offset[inputs[i]] for i in range(len(inputs))},
+        factor_inputs={i: x_factor[inputs[i]] for i in range(len(inputs))},
+        offset_outputs={i: y_offset[outputs[i]] for i in range(len(outputs))},
+        factor_outputs={i: y_factor[outputs[i]] for i in range(len(outputs))}
+    )
+
+try:
+    dir = './results/Models/CS2_ReLU_TEE.onnx'
+    onnx_model = onnx.load(dir)
+except:
+    dir = '../results/Models/CS2_ReLU_TEE.onnx'
+    onnx_model = onnx.load(dir)
+net_TEE = load_onnx_neural_network(onnx_model, scaler_TEE, scaled_input_bounds_TEE)
+
+
+try:
+    dir = './data/CS2_Sampling/Batch_Reactor_NN_TGE'
+    df = pd.read_csv(dir) 
+except:
+    dir = '../data/CS2_Sampling/Batch_Reactor_NN_TGE'
+    df = pd.read_csv(dir)
+
+dfin_TGE = df[inputs]
+dfout_TGE = df[outputs]
+
+#Scaling
+x_offset, x_factor = dfin_TGE.mean().to_dict(), dfin_TGE.std().to_dict()
+y_offset, y_factor = dfout_TGE.mean().to_dict(), dfout_TGE.std().to_dict()
+
+dfin_TGE = (dfin_TGE - dfin_TGE.mean()).divide(dfin_TGE.std())
+dfout_TGE = (dfout_TGE - dfout_TGE.mean()).divide(dfout_TGE.std())
+
+#Save the scaling parameters of the inputs for OMLT
+scaled_lb = dfin_TGE.min()[inputs].values
+scaled_ub = dfin_TGE.max()[inputs].values
+scaled_input_bounds_TGE = {i: (scaled_lb[i], scaled_ub[i]) for i in range(len(inputs))}
+# scaling factors
+scaler_TGE = OffsetScaling(
+        offset_inputs={i: x_offset[inputs[i]] for i in range(len(inputs))},
+        factor_inputs={i: x_factor[inputs[i]] for i in range(len(inputs))},
+        offset_outputs={i: y_offset[outputs[i]] for i in range(len(outputs))},
+        factor_outputs={i: y_factor[outputs[i]] for i in range(len(outputs))}
+    )
+
+try:
+    dir = './results/Models/CS2_ReLU_TGE.onnx'
+    onnx_model = onnx.load(dir)
+except:
+    dir = '../results/Models/CS2_ReLU_TGE.onnx'
+    onnx_model = onnx.load(dir)
+net_TGE = load_onnx_neural_network(onnx_model, scaler_TGE, scaled_input_bounds_TGE)
+
+
+try:
+    dir = './data/CS2_Sampling/Batch_Reactor_NN_TI'
+    df = pd.read_csv(dir) 
+except:
+    dir = '../data/CS2_Sampling/Batch_Reactor_NN_TI'
+    df = pd.read_csv(dir)
+
+dfin_TI = df[inputs]
+dfout_TI = df[outputs]
+
+#Scaling
+x_offset, x_factor = dfin_TI.mean().to_dict(), dfin_TI.std().to_dict()
+y_offset, y_factor = dfout_TI.mean().to_dict(), dfout_TI.std().to_dict()
+
+dfin_TI = (dfin_TI - dfin_TI.mean()).divide(dfin_TI.std())
+dfout_TI = (dfout_TI - dfout_TI.mean()).divide(dfout_TI.std())
+
+#Save the scaling parameters of the inputs for OMLT
+scaled_lb = dfin_TI.min()[inputs].values
+scaled_ub = dfin_TI.max()[inputs].values
+scaled_input_bounds_TI = {i: (scaled_lb[i], scaled_ub[i]) for i in range(len(inputs))}
+# scaling factors
+scaler_TI = OffsetScaling(
+        offset_inputs={i: x_offset[inputs[i]] for i in range(len(inputs))},
+        factor_inputs={i: x_factor[inputs[i]] for i in range(len(inputs))},
+        offset_outputs={i: y_offset[outputs[i]] for i in range(len(outputs))},
+        factor_outputs={i: y_factor[outputs[i]] for i in range(len(outputs))}
+    )
+
+try:
+    dir = './results/Models/CS2_ReLU_TI.onnx'
+    onnx_model = onnx.load(dir)
+except:
+    dir = '../results/Models/CS2_ReLU_TI.onnx'
+    onnx_model = onnx.load(dir)
+net_TI = load_onnx_neural_network(onnx_model, scaler_TI, scaled_input_bounds_TI)
+
+
 
 def centralised(data, fix_TP=False):
 
@@ -398,7 +551,7 @@ def centralised(data, fix_TP=False):
 
 
 
-def scheduling_Asia_bi(data, tightened=True):
+def scheduling_Asia_bi_complete(data, tightened=True):
 
     model = pyo.ConcreteModel()
     model.N = pyo.Set(initialize=data[None]['N'])
@@ -449,106 +602,508 @@ def scheduling_Asia_bi(data, tightened=True):
     model.CCH_cost = pyo.Var()
     model.st_cost = pyo.Var()
 
-    model.tf_1 = pyo.Var(model.N)
-    model.tf_2 = pyo.Var(model.N)
-    model.energy_1 = pyo.Var(model.N)
-    model.energy_2 = pyo.Var(model.N)
-
-    model.NN1_0 = OmltBlock()
-    model.NN1_1 = OmltBlock()
-    model.NN1_2 = OmltBlock()
-    model.NN1_3 = OmltBlock()
-    model.NN1_4 = OmltBlock()
-    model.NN1_5 = OmltBlock()
-    model.NN1_6 = OmltBlock()
-    # model.NN_7 = OmltBlock()
-
-    model.NN1_0.build_formulation(ReluBigMFormulation(net))
-    model.NN1_1.build_formulation(ReluBigMFormulation(net))
-    model.NN1_2.build_formulation(ReluBigMFormulation(net))
-    model.NN1_3.build_formulation(ReluBigMFormulation(net))
-    model.NN1_4.build_formulation(ReluBigMFormulation(net))
-    model.NN1_5.build_formulation(ReluBigMFormulation(net))
-    model.NN1_6.build_formulation(ReluBigMFormulation(net))
-    # model.NN_7.build_formulation(ReluBigMFormulation(net))
-
     model.linking = pyo.ConstraintList()
 
-    model.linking.add(model.Bs['PA1',0] == model.NN1_0.inputs[0])
-    model.linking.add(model.Bs['PA1',1] == model.NN1_1.inputs[0])
-    model.linking.add(model.Bs['PA1',2] == model.NN1_2.inputs[0])
-    model.linking.add(model.Bs['PA1',3] == model.NN1_3.inputs[0])
-    model.linking.add(model.Bs['PA1',4] == model.NN1_4.inputs[0])
-    model.linking.add(model.Bs['PA1',5] == model.NN1_5.inputs[0])
-    model.linking.add(model.Bs['PA1',6] == model.NN1_6.inputs[0])
-    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+    model.tf_PA1 = pyo.Var(model.N)
+    model.tf_PA2 = pyo.Var(model.N)
+    model.energy_PA1 = pyo.Var(model.N)
+    model.energy_PA2 = pyo.Var(model.N)
 
-    # # #Output tf
-    model.linking.add(model.tf_1[0] == model.NN1_0.outputs[0])
-    model.linking.add(model.tf_1[1] == model.NN1_1.outputs[0])
-    model.linking.add(model.tf_1[2] == model.NN1_2.outputs[0])
-    model.linking.add(model.tf_1[3] == model.NN1_3.outputs[0])
-    model.linking.add(model.tf_1[4] == model.NN1_4.outputs[0])
-    model.linking.add(model.tf_1[5] == model.NN1_5.outputs[0])
-    model.linking.add(model.tf_1[6] == model.NN1_6.outputs[0])
-    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
-
-    # # Output Q
-    model.linking.add(model.energy_1[0] == model.NN1_0.outputs[1])
-    model.linking.add(model.energy_1[1] == model.NN1_1.outputs[1])
-    model.linking.add(model.energy_1[2] == model.NN1_2.outputs[1])
-    model.linking.add(model.energy_1[3] == model.NN1_3.outputs[1])
-    model.linking.add(model.energy_1[4] == model.NN1_4.outputs[1])
-    model.linking.add(model.energy_1[5] == model.NN1_5.outputs[1])
-    model.linking.add(model.energy_1[6] == model.NN1_6.outputs[1])
-    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
-
-    model.NN2_0 = OmltBlock()
-    model.NN2_1 = OmltBlock()
-    model.NN2_2 = OmltBlock()
-    model.NN2_3 = OmltBlock()
-    model.NN2_4 = OmltBlock()
-    model.NN2_5 = OmltBlock()
-    model.NN2_6 = OmltBlock()
+    model.NNPA1_0 = OmltBlock()
+    model.NNPA1_1 = OmltBlock()
+    model.NNPA1_2 = OmltBlock()
+    model.NNPA1_3 = OmltBlock()
+    model.NNPA1_4 = OmltBlock()
+    model.NNPA1_5 = OmltBlock()
+    model.NNPA1_6 = OmltBlock()
     # model.NN_7 = OmltBlock()
 
-    model.NN2_0.build_formulation(ReluBigMFormulation(net))
-    model.NN2_1.build_formulation(ReluBigMFormulation(net))
-    model.NN2_2.build_formulation(ReluBigMFormulation(net))
-    model.NN2_3.build_formulation(ReluBigMFormulation(net))
-    model.NN2_4.build_formulation(ReluBigMFormulation(net))
-    model.NN2_5.build_formulation(ReluBigMFormulation(net))
-    model.NN2_6.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_0.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_1.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_2.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_3.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_4.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_5.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_6.build_formulation(ReluBigMFormulation(net))
     # model.NN_7.build_formulation(ReluBigMFormulation(net))
 
-    model.linking.add(model.Bs['PA2',0] == model.NN2_0.inputs[0])
-    model.linking.add(model.Bs['PA2',1] == model.NN2_1.inputs[0])
-    model.linking.add(model.Bs['PA2',2] == model.NN2_2.inputs[0])
-    model.linking.add(model.Bs['PA2',3] == model.NN2_3.inputs[0])
-    model.linking.add(model.Bs['PA2',4] == model.NN2_4.inputs[0])
-    model.linking.add(model.Bs['PA2',5] == model.NN2_5.inputs[0])
-    model.linking.add(model.Bs['PA2',6] == model.NN2_6.inputs[0])
+    model.linking.add(model.Bs['PA1',0] == model.NNPA1_0.inputs[0])
+    model.linking.add(model.Bs['PA1',1] == model.NNPA1_1.inputs[0])
+    model.linking.add(model.Bs['PA1',2] == model.NNPA1_2.inputs[0])
+    model.linking.add(model.Bs['PA1',3] == model.NNPA1_3.inputs[0])
+    model.linking.add(model.Bs['PA1',4] == model.NNPA1_4.inputs[0])
+    model.linking.add(model.Bs['PA1',5] == model.NNPA1_5.inputs[0])
+    model.linking.add(model.Bs['PA1',6] == model.NNPA1_6.inputs[0])
     # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
 
     # # #Output tf
-    model.linking.add(model.tf_2[0] == model.NN2_0.outputs[0])
-    model.linking.add(model.tf_2[1] == model.NN2_1.outputs[0])
-    model.linking.add(model.tf_2[2] == model.NN2_2.outputs[0])
-    model.linking.add(model.tf_2[3] == model.NN2_3.outputs[0])
-    model.linking.add(model.tf_2[4] == model.NN2_4.outputs[0])
-    model.linking.add(model.tf_2[5] == model.NN2_5.outputs[0])
-    model.linking.add(model.tf_2[6] == model.NN2_6.outputs[0])
+    model.linking.add(model.tf_PA1[0] == model.NNPA1_0.outputs[0])
+    model.linking.add(model.tf_PA1[1] == model.NNPA1_1.outputs[0])
+    model.linking.add(model.tf_PA1[2] == model.NNPA1_2.outputs[0])
+    model.linking.add(model.tf_PA1[3] == model.NNPA1_3.outputs[0])
+    model.linking.add(model.tf_PA1[4] == model.NNPA1_4.outputs[0])
+    model.linking.add(model.tf_PA1[5] == model.NNPA1_5.outputs[0])
+    model.linking.add(model.tf_PA1[6] == model.NNPA1_6.outputs[0])
     # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
 
     # # Output Q
-    model.linking.add(model.energy_2[0] == model.NN2_0.outputs[1])
-    model.linking.add(model.energy_2[1] == model.NN2_1.outputs[1])
-    model.linking.add(model.energy_2[2] == model.NN2_2.outputs[1])
-    model.linking.add(model.energy_2[3] == model.NN2_3.outputs[1])
-    model.linking.add(model.energy_2[4] == model.NN2_4.outputs[1])
-    model.linking.add(model.energy_2[5] == model.NN2_5.outputs[1])
-    model.linking.add(model.energy_2[6] == model.NN2_6.outputs[1])
+    model.linking.add(model.energy_PA1[0] == model.NNPA1_0.outputs[1])
+    model.linking.add(model.energy_PA1[1] == model.NNPA1_1.outputs[1])
+    model.linking.add(model.energy_PA1[2] == model.NNPA1_2.outputs[1])
+    model.linking.add(model.energy_PA1[3] == model.NNPA1_3.outputs[1])
+    model.linking.add(model.energy_PA1[4] == model.NNPA1_4.outputs[1])
+    model.linking.add(model.energy_PA1[5] == model.NNPA1_5.outputs[1])
+    model.linking.add(model.energy_PA1[6] == model.NNPA1_6.outputs[1])
     # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+    model.NNPA2_0 = OmltBlock()
+    model.NNPA2_1 = OmltBlock()
+    model.NNPA2_2 = OmltBlock()
+    model.NNPA2_3 = OmltBlock()
+    model.NNPA2_4 = OmltBlock()
+    model.NNPA2_5 = OmltBlock()
+    model.NNPA2_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNPA2_0.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_1.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_2.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_3.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_4.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_5.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_6.build_formulation(ReluBigMFormulation(net))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['PA2',0] == model.NNPA2_0.inputs[0])
+    model.linking.add(model.Bs['PA2',1] == model.NNPA2_1.inputs[0])
+    model.linking.add(model.Bs['PA2',2] == model.NNPA2_2.inputs[0])
+    model.linking.add(model.Bs['PA2',3] == model.NNPA2_3.inputs[0])
+    model.linking.add(model.Bs['PA2',4] == model.NNPA2_4.inputs[0])
+    model.linking.add(model.Bs['PA2',5] == model.NNPA2_5.inputs[0])
+    model.linking.add(model.Bs['PA2',6] == model.NNPA2_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_PA2[0] == model.NNPA2_0.outputs[0])
+    model.linking.add(model.tf_PA2[1] == model.NNPA2_1.outputs[0])
+    model.linking.add(model.tf_PA2[2] == model.NNPA2_2.outputs[0])
+    model.linking.add(model.tf_PA2[3] == model.NNPA2_3.outputs[0])
+    model.linking.add(model.tf_PA2[4] == model.NNPA2_4.outputs[0])
+    model.linking.add(model.tf_PA2[5] == model.NNPA2_5.outputs[0])
+    model.linking.add(model.tf_PA2[6] == model.NNPA2_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_PA2[0] == model.NNPA2_0.outputs[1])
+    model.linking.add(model.energy_PA2[1] == model.NNPA2_1.outputs[1])
+    model.linking.add(model.energy_PA2[2] == model.NNPA2_2.outputs[1])
+    model.linking.add(model.energy_PA2[3] == model.NNPA2_3.outputs[1])
+    model.linking.add(model.energy_PA2[4] == model.NNPA2_4.outputs[1])
+    model.linking.add(model.energy_PA2[5] == model.NNPA2_5.outputs[1])
+    model.linking.add(model.energy_PA2[6] == model.NNPA2_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+    
+    model.tf_PB1 = pyo.Var(model.N)
+    model.tf_PB2 = pyo.Var(model.N)
+    model.energy_PB1 = pyo.Var(model.N)
+    model.energy_PB2 = pyo.Var(model.N)
+
+    model.NNPB1_0 = OmltBlock()
+    model.NNPB1_1 = OmltBlock()
+    model.NNPB1_2 = OmltBlock()
+    model.NNPB1_3 = OmltBlock()
+    model.NNPB1_4 = OmltBlock()
+    model.NNPB1_5 = OmltBlock()
+    model.NNPB1_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNPB1_0.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_1.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_2.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_3.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_4.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_5.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_6.build_formulation(ReluBigMFormulation(net_PB))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['PB1',0] == model.NNPB1_0.inputs[0])
+    model.linking.add(model.Bs['PB1',1] == model.NNPB1_1.inputs[0])
+    model.linking.add(model.Bs['PB1',2] == model.NNPB1_2.inputs[0])
+    model.linking.add(model.Bs['PB1',3] == model.NNPB1_3.inputs[0])
+    model.linking.add(model.Bs['PB1',4] == model.NNPB1_4.inputs[0])
+    model.linking.add(model.Bs['PB1',5] == model.NNPB1_5.inputs[0])
+    model.linking.add(model.Bs['PB1',6] == model.NNPB1_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_PB1[0] == model.NNPB1_0.outputs[0])
+    model.linking.add(model.tf_PB1[1] == model.NNPB1_1.outputs[0])
+    model.linking.add(model.tf_PB1[2] == model.NNPB1_2.outputs[0])
+    model.linking.add(model.tf_PB1[3] == model.NNPB1_3.outputs[0])
+    model.linking.add(model.tf_PB1[4] == model.NNPB1_4.outputs[0])
+    model.linking.add(model.tf_PB1[5] == model.NNPB1_5.outputs[0])
+    model.linking.add(model.tf_PB1[6] == model.NNPB1_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_PB1[0] == model.NNPB1_0.outputs[1])
+    model.linking.add(model.energy_PB1[1] == model.NNPB1_1.outputs[1])
+    model.linking.add(model.energy_PB1[2] == model.NNPB1_2.outputs[1])
+    model.linking.add(model.energy_PB1[3] == model.NNPB1_3.outputs[1])
+    model.linking.add(model.energy_PB1[4] == model.NNPB1_4.outputs[1])
+    model.linking.add(model.energy_PB1[5] == model.NNPB1_5.outputs[1])
+    model.linking.add(model.energy_PB1[6] == model.NNPB1_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+    model.NNPB2_0 = OmltBlock()
+    model.NNPB2_1 = OmltBlock()
+    model.NNPB2_2 = OmltBlock()
+    model.NNPB2_3 = OmltBlock()
+    model.NNPB2_4 = OmltBlock()
+    model.NNPB2_5 = OmltBlock()
+    model.NNPB2_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNPB2_0.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_1.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_2.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_3.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_4.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_5.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_6.build_formulation(ReluBigMFormulation(net_PB))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['PB2',0] == model.NNPB2_0.inputs[0])
+    model.linking.add(model.Bs['PB2',1] == model.NNPB2_1.inputs[0])
+    model.linking.add(model.Bs['PB2',2] == model.NNPB2_2.inputs[0])
+    model.linking.add(model.Bs['PB2',3] == model.NNPB2_3.inputs[0])
+    model.linking.add(model.Bs['PB2',4] == model.NNPB2_4.inputs[0])
+    model.linking.add(model.Bs['PB2',5] == model.NNPB2_5.inputs[0])
+    model.linking.add(model.Bs['PB2',6] == model.NNPB2_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_PB2[0] == model.NNPB2_0.outputs[0])
+    model.linking.add(model.tf_PB2[1] == model.NNPB2_1.outputs[0])
+    model.linking.add(model.tf_PB2[2] == model.NNPB2_2.outputs[0])
+    model.linking.add(model.tf_PB2[3] == model.NNPB2_3.outputs[0])
+    model.linking.add(model.tf_PB2[4] == model.NNPB2_4.outputs[0])
+    model.linking.add(model.tf_PB2[5] == model.NNPB2_5.outputs[0])
+    model.linking.add(model.tf_PB2[6] == model.NNPB2_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_PB2[0] == model.NNPB2_0.outputs[1])
+    model.linking.add(model.energy_PB2[1] == model.NNPB2_1.outputs[1])
+    model.linking.add(model.energy_PB2[2] == model.NNPB2_2.outputs[1])
+    model.linking.add(model.energy_PB2[3] == model.NNPB2_3.outputs[1])
+    model.linking.add(model.energy_PB2[4] == model.NNPB2_4.outputs[1])
+    model.linking.add(model.energy_PB2[5] == model.NNPB2_5.outputs[1])
+    model.linking.add(model.energy_PB2[6] == model.NNPB2_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+
+
+    model.tf_TEE1 = pyo.Var(model.N)
+    model.tf_TEE2 = pyo.Var(model.N)
+    model.energy_TEE1 = pyo.Var(model.N)
+    model.energy_TEE2 = pyo.Var(model.N)
+
+    model.NNTEE1_0 = OmltBlock()
+    model.NNTEE1_1 = OmltBlock()
+    model.NNTEE1_2 = OmltBlock()
+    model.NNTEE1_3 = OmltBlock()
+    model.NNTEE1_4 = OmltBlock()
+    model.NNTEE1_5 = OmltBlock()
+    model.NNTEE1_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNTEE1_0.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE1_1.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE1_2.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE1_3.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE1_4.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE1_5.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE1_6.build_formulation(ReluBigMFormulation(net_TEE))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['TEE1',0] == model.NNTEE1_0.inputs[0])
+    model.linking.add(model.Bs['TEE1',1] == model.NNTEE1_1.inputs[0])
+    model.linking.add(model.Bs['TEE1',2] == model.NNTEE1_2.inputs[0])
+    model.linking.add(model.Bs['TEE1',3] == model.NNTEE1_3.inputs[0])
+    model.linking.add(model.Bs['TEE1',4] == model.NNTEE1_4.inputs[0])
+    model.linking.add(model.Bs['TEE1',5] == model.NNTEE1_5.inputs[0])
+    model.linking.add(model.Bs['TEE1',6] == model.NNTEE1_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_TEE1[0] == model.NNTEE1_0.outputs[0])
+    model.linking.add(model.tf_TEE1[1] == model.NNTEE1_1.outputs[0])
+    model.linking.add(model.tf_TEE1[2] == model.NNTEE1_2.outputs[0])
+    model.linking.add(model.tf_TEE1[3] == model.NNTEE1_3.outputs[0])
+    model.linking.add(model.tf_TEE1[4] == model.NNTEE1_4.outputs[0])
+    model.linking.add(model.tf_TEE1[5] == model.NNTEE1_5.outputs[0])
+    model.linking.add(model.tf_TEE1[6] == model.NNTEE1_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_TEE1[0] == model.NNTEE1_0.outputs[1])
+    model.linking.add(model.energy_TEE1[1] == model.NNTEE1_1.outputs[1])
+    model.linking.add(model.energy_TEE1[2] == model.NNTEE1_2.outputs[1])
+    model.linking.add(model.energy_TEE1[3] == model.NNTEE1_3.outputs[1])
+    model.linking.add(model.energy_TEE1[4] == model.NNTEE1_4.outputs[1])
+    model.linking.add(model.energy_TEE1[5] == model.NNTEE1_5.outputs[1])
+    model.linking.add(model.energy_TEE1[6] == model.NNTEE1_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+    model.NNTEE2_0 = OmltBlock()
+    model.NNTEE2_1 = OmltBlock()
+    model.NNTEE2_2 = OmltBlock()
+    model.NNTEE2_3 = OmltBlock()
+    model.NNTEE2_4 = OmltBlock()
+    model.NNTEE2_5 = OmltBlock()
+    model.NNTEE2_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNTEE2_0.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE2_1.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE2_2.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE2_3.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE2_4.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE2_5.build_formulation(ReluBigMFormulation(net_TEE))
+    model.NNTEE2_6.build_formulation(ReluBigMFormulation(net_TEE))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['TEE2',0] == model.NNTEE2_0.inputs[0])
+    model.linking.add(model.Bs['TEE2',1] == model.NNTEE2_1.inputs[0])
+    model.linking.add(model.Bs['TEE2',2] == model.NNTEE2_2.inputs[0])
+    model.linking.add(model.Bs['TEE2',3] == model.NNTEE2_3.inputs[0])
+    model.linking.add(model.Bs['TEE2',4] == model.NNTEE2_4.inputs[0])
+    model.linking.add(model.Bs['TEE2',5] == model.NNTEE2_5.inputs[0])
+    model.linking.add(model.Bs['TEE2',6] == model.NNTEE2_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_TEE2[0] == model.NNTEE2_0.outputs[0])
+    model.linking.add(model.tf_TEE2[1] == model.NNTEE2_1.outputs[0])
+    model.linking.add(model.tf_TEE2[2] == model.NNTEE2_2.outputs[0])
+    model.linking.add(model.tf_TEE2[3] == model.NNTEE2_3.outputs[0])
+    model.linking.add(model.tf_TEE2[4] == model.NNTEE2_4.outputs[0])
+    model.linking.add(model.tf_TEE2[5] == model.NNTEE2_5.outputs[0])
+    model.linking.add(model.tf_TEE2[6] == model.NNTEE2_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_TEE2[0] == model.NNTEE2_0.outputs[1])
+    model.linking.add(model.energy_TEE2[1] == model.NNTEE2_1.outputs[1])
+    model.linking.add(model.energy_TEE2[2] == model.NNTEE2_2.outputs[1])
+    model.linking.add(model.energy_TEE2[3] == model.NNTEE2_3.outputs[1])
+    model.linking.add(model.energy_TEE2[4] == model.NNTEE2_4.outputs[1])
+    model.linking.add(model.energy_TEE2[5] == model.NNTEE2_5.outputs[1])
+    model.linking.add(model.energy_TEE2[6] == model.NNTEE2_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+    
+    model.tf_TGE1 = pyo.Var(model.N)
+    model.tf_TGE2 = pyo.Var(model.N)
+    model.energy_TGE1 = pyo.Var(model.N)
+    model.energy_TGE2 = pyo.Var(model.N)
+
+    model.NNTGE1_0 = OmltBlock()
+    model.NNTGE1_1 = OmltBlock()
+    model.NNTGE1_2 = OmltBlock()
+    model.NNTGE1_3 = OmltBlock()
+    model.NNTGE1_4 = OmltBlock()
+    model.NNTGE1_5 = OmltBlock()
+    model.NNTGE1_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNTGE1_0.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE1_1.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE1_2.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE1_3.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE1_4.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE1_5.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE1_6.build_formulation(ReluBigMFormulation(net_TGE))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['TGE1',0] == model.NNTGE1_0.inputs[0])
+    model.linking.add(model.Bs['TGE1',1] == model.NNTGE1_1.inputs[0])
+    model.linking.add(model.Bs['TGE1',2] == model.NNTGE1_2.inputs[0])
+    model.linking.add(model.Bs['TGE1',3] == model.NNTGE1_3.inputs[0])
+    model.linking.add(model.Bs['TGE1',4] == model.NNTGE1_4.inputs[0])
+    model.linking.add(model.Bs['TGE1',5] == model.NNTGE1_5.inputs[0])
+    model.linking.add(model.Bs['TGE1',6] == model.NNTGE1_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_TGE1[0] == model.NNTGE1_0.outputs[0])
+    model.linking.add(model.tf_TGE1[1] == model.NNTGE1_1.outputs[0])
+    model.linking.add(model.tf_TGE1[2] == model.NNTGE1_2.outputs[0])
+    model.linking.add(model.tf_TGE1[3] == model.NNTGE1_3.outputs[0])
+    model.linking.add(model.tf_TGE1[4] == model.NNTGE1_4.outputs[0])
+    model.linking.add(model.tf_TGE1[5] == model.NNTGE1_5.outputs[0])
+    model.linking.add(model.tf_TGE1[6] == model.NNTGE1_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_TGE1[0] == model.NNTGE1_0.outputs[1])
+    model.linking.add(model.energy_TGE1[1] == model.NNTGE1_1.outputs[1])
+    model.linking.add(model.energy_TGE1[2] == model.NNTGE1_2.outputs[1])
+    model.linking.add(model.energy_TGE1[3] == model.NNTGE1_3.outputs[1])
+    model.linking.add(model.energy_TGE1[4] == model.NNTGE1_4.outputs[1])
+    model.linking.add(model.energy_TGE1[5] == model.NNTGE1_5.outputs[1])
+    model.linking.add(model.energy_TGE1[6] == model.NNTGE1_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+    model.NNTGE2_0 = OmltBlock()
+    model.NNTGE2_1 = OmltBlock()
+    model.NNTGE2_2 = OmltBlock()
+    model.NNTGE2_3 = OmltBlock()
+    model.NNTGE2_4 = OmltBlock()
+    model.NNTGE2_5 = OmltBlock()
+    model.NNTGE2_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNTGE2_0.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE2_1.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE2_2.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE2_3.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE2_4.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE2_5.build_formulation(ReluBigMFormulation(net_TGE))
+    model.NNTGE2_6.build_formulation(ReluBigMFormulation(net_TGE))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['TGE2',0] == model.NNTGE2_0.inputs[0])
+    model.linking.add(model.Bs['TGE2',1] == model.NNTGE2_1.inputs[0])
+    model.linking.add(model.Bs['TGE2',2] == model.NNTGE2_2.inputs[0])
+    model.linking.add(model.Bs['TGE2',3] == model.NNTGE2_3.inputs[0])
+    model.linking.add(model.Bs['TGE2',4] == model.NNTGE2_4.inputs[0])
+    model.linking.add(model.Bs['TGE2',5] == model.NNTGE2_5.inputs[0])
+    model.linking.add(model.Bs['TGE2',6] == model.NNTGE2_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_TGE2[0] == model.NNTGE2_0.outputs[0])
+    model.linking.add(model.tf_TGE2[1] == model.NNTGE2_1.outputs[0])
+    model.linking.add(model.tf_TGE2[2] == model.NNTGE2_2.outputs[0])
+    model.linking.add(model.tf_TGE2[3] == model.NNTGE2_3.outputs[0])
+    model.linking.add(model.tf_TGE2[4] == model.NNTGE2_4.outputs[0])
+    model.linking.add(model.tf_TGE2[5] == model.NNTGE2_5.outputs[0])
+    model.linking.add(model.tf_TGE2[6] == model.NNTGE2_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_TGE2[0] == model.NNTGE2_0.outputs[1])
+    model.linking.add(model.energy_TGE2[1] == model.NNTGE2_1.outputs[1])
+    model.linking.add(model.energy_TGE2[2] == model.NNTGE2_2.outputs[1])
+    model.linking.add(model.energy_TGE2[3] == model.NNTGE2_3.outputs[1])
+    model.linking.add(model.energy_TGE2[4] == model.NNTGE2_4.outputs[1])
+    model.linking.add(model.energy_TGE2[5] == model.NNTGE2_5.outputs[1])
+    model.linking.add(model.energy_TGE2[6] == model.NNTGE2_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+
+    model.tf_TI1 = pyo.Var(model.N)
+    model.tf_TI2 = pyo.Var(model.N)
+    model.energy_TI1 = pyo.Var(model.N)
+    model.energy_TI2 = pyo.Var(model.N)
+
+    model.NNTI1_0 = OmltBlock()
+    model.NNTI1_1 = OmltBlock()
+    model.NNTI1_2 = OmltBlock()
+    model.NNTI1_3 = OmltBlock()
+    model.NNTI1_4 = OmltBlock()
+    model.NNTI1_5 = OmltBlock()
+    model.NNTI1_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNTI1_0.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI1_1.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI1_2.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI1_3.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI1_4.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI1_5.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI1_6.build_formulation(ReluBigMFormulation(net_TI))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['TI1',0] == model.NNTI1_0.inputs[0])
+    model.linking.add(model.Bs['TI1',1] == model.NNTI1_1.inputs[0])
+    model.linking.add(model.Bs['TI1',2] == model.NNTI1_2.inputs[0])
+    model.linking.add(model.Bs['TI1',3] == model.NNTI1_3.inputs[0])
+    model.linking.add(model.Bs['TI1',4] == model.NNTI1_4.inputs[0])
+    model.linking.add(model.Bs['TI1',5] == model.NNTI1_5.inputs[0])
+    model.linking.add(model.Bs['TI1',6] == model.NNTI1_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_TI1[0] == model.NNTI1_0.outputs[0])
+    model.linking.add(model.tf_TI1[1] == model.NNTI1_1.outputs[0])
+    model.linking.add(model.tf_TI1[2] == model.NNTI1_2.outputs[0])
+    model.linking.add(model.tf_TI1[3] == model.NNTI1_3.outputs[0])
+    model.linking.add(model.tf_TI1[4] == model.NNTI1_4.outputs[0])
+    model.linking.add(model.tf_TI1[5] == model.NNTI1_5.outputs[0])
+    model.linking.add(model.tf_TI1[6] == model.NNTI1_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_TI1[0] == model.NNTI1_0.outputs[1])
+    model.linking.add(model.energy_TI1[1] == model.NNTI1_1.outputs[1])
+    model.linking.add(model.energy_TI1[2] == model.NNTI1_2.outputs[1])
+    model.linking.add(model.energy_TI1[3] == model.NNTI1_3.outputs[1])
+    model.linking.add(model.energy_TI1[4] == model.NNTI1_4.outputs[1])
+    model.linking.add(model.energy_TI1[5] == model.NNTI1_5.outputs[1])
+    model.linking.add(model.energy_TI1[6] == model.NNTI1_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+    model.NNTI2_0 = OmltBlock()
+    model.NNTI2_1 = OmltBlock()
+    model.NNTI2_2 = OmltBlock()
+    model.NNTI2_3 = OmltBlock()
+    model.NNTI2_4 = OmltBlock()
+    model.NNTI2_5 = OmltBlock()
+    model.NNTI2_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNTI2_0.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI2_1.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI2_2.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI2_3.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI2_4.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI2_5.build_formulation(ReluBigMFormulation(net_TI))
+    model.NNTI2_6.build_formulation(ReluBigMFormulation(net_TI))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['TI2',0] == model.NNTI2_0.inputs[0])
+    model.linking.add(model.Bs['TI2',1] == model.NNTI2_1.inputs[0])
+    model.linking.add(model.Bs['TI2',2] == model.NNTI2_2.inputs[0])
+    model.linking.add(model.Bs['TI2',3] == model.NNTI2_3.inputs[0])
+    model.linking.add(model.Bs['TI2',4] == model.NNTI2_4.inputs[0])
+    model.linking.add(model.Bs['TI2',5] == model.NNTI2_5.inputs[0])
+    model.linking.add(model.Bs['TI2',6] == model.NNTI2_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_TI2[0] == model.NNTI2_0.outputs[0])
+    model.linking.add(model.tf_TI2[1] == model.NNTI2_1.outputs[0])
+    model.linking.add(model.tf_TI2[2] == model.NNTI2_2.outputs[0])
+    model.linking.add(model.tf_TI2[3] == model.NNTI2_3.outputs[0])
+    model.linking.add(model.tf_TI2[4] == model.NNTI2_4.outputs[0])
+    model.linking.add(model.tf_TI2[5] == model.NNTI2_5.outputs[0])
+    model.linking.add(model.tf_TI2[6] == model.NNTI2_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_TI2[0] == model.NNTI2_0.outputs[1])
+    model.linking.add(model.energy_TI2[1] == model.NNTI2_1.outputs[1])
+    model.linking.add(model.energy_TI2[2] == model.NNTI2_2.outputs[1])
+    model.linking.add(model.energy_TI2[3] == model.NNTI2_3.outputs[1])
+    model.linking.add(model.energy_TI2[4] == model.NNTI2_4.outputs[1])
+    model.linking.add(model.energy_TI2[5] == model.NNTI2_5.outputs[1])
+    model.linking.add(model.energy_TI2[6] == model.NNTI2_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
 
     ## Initial state
     def init(m, s):
@@ -592,12 +1147,26 @@ def scheduling_Asia_bi(data, tightened=True):
     ## Duration, finish time, and time-matching constraints
 
     def constr7(m, i, n):
-        if i[:-1] != 'PA':
-            return m.D[i, n] == m.alpha[i]*m.Ws[i,n] + m.beta[i]*m.Bs[i,n]
+        if i=='TI1':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_TI1[n])*m.Ws[i,n]
+        elif i=='TI2':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_TI2[n])*m.Ws[i,n]
         elif i=='PA1':
-            return m.D[i, n] == (m.alpha[i]+ m.tf_1[n])*m.Ws[i,n]
-        else:
-            return m.D[i, n] == (m.alpha[i]+ m.tf_2[n])*m.Ws[i,n]
+            return m.D[i, n] == (m.alpha[i]+ m.tf_PA1[n])*m.Ws[i,n]
+        elif i=='PA2':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_PA2[n])*m.Ws[i,n]
+        elif i=='PB1':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_PB1[n])*m.Ws[i,n]
+        elif i=='PB2':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_PB2[n])*m.Ws[i,n]
+        elif i=='TEE1':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_TEE1[n])*m.Ws[i,n]
+        elif i=='TEE2':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_TEE2[n])*m.Ws[i,n]
+        elif i=='TGE1':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_TGE1[n])*m.Ws[i,n]
+        else: #elif i=='TGE2':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_TGE2[n])*m.Ws[i,n]
     model.c7 = pyo.Constraint(model.I, model.N, rule=constr7)
 
     # def constr7(m, i, n):
@@ -752,7 +1321,7 @@ def scheduling_Asia_bi(data, tightened=True):
     model.c_storage = pyo.Constraint(rule=constr_storage)
 
     solver = pyo.SolverFactory("gurobi_direct")
-    solver.options['TimeLimit'] = 60.
+    # solver.options['TimeLimit'] = 60.
     res = solver.solve(model)
 
     return model
@@ -906,7 +1475,7 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 
 # t0 = time.time()
 
-# res_Sch = scheduling_Asia_bi(scheduling_data)
+# res_Sch = scheduling_Asia_bi_complete(scheduling_data)
 # print('Objective: ', pyo.value(res_Sch.obj))
 # print('Makeover: ',  pyo.value(res_Sch.MS))
 # print(pyo.value(res_Sch.S['AI',0]))
@@ -914,13 +1483,20 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 # print(pyo.value(res_Sch.S['TI',res_Sch.N_last]))
 # print(pyo.value(res_Sch.S['PA',res_Sch.N_last]))
 
-# energy = sum(res_Sch.energy_1[n] + res_Sch.energy_2[n] for n in res_Sch.N)
-# print(f"Energy cost: {pyo.value(energy)}")
+# energy_PA = sum(res_Sch.energy_PA1[n] + res_Sch.energy_PA2[n] for n in res_Sch.N)
+# print(f"Energy cost PA: {pyo.value(energy_PA)}")
+# energy_PB = sum(res_Sch.energy_PB1[n] + res_Sch.energy_PB2[n] for n in res_Sch.N)
+# print(f"Energy cost PB: {pyo.value(energy_PB)}")
+# energy_TEE = sum(res_Sch.energy_TEE1[n] + res_Sch.energy_TEE2[n] for n in res_Sch.N)
+# print(f"Energy cost TEE: {pyo.value(energy_TEE)}")
+# energy_TGE = sum(res_Sch.energy_TGE1[n] + res_Sch.energy_TGE2[n] for n in res_Sch.N)
+# print(f"Energy cost TGE: {pyo.value(energy_TGE)}")
+# energy_TI = sum(res_Sch.energy_TI1[n] + res_Sch.energy_TI2[n] for n in res_Sch.N)
+# print(f"Energy cost TI: {pyo.value(energy_TI)}")
 
 # t1 = time.time()
 
 # print('Tightened: ', (t1-t0))
-
 
 # # for n in res_Sch.N:
 # #     for i in res_Sch.I:
@@ -1005,4 +1581,6 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 # plt.show()
 # plt.clf()
 # # plt.savefig('test.png')
+
+# ## 
 

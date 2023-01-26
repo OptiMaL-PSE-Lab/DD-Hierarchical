@@ -7,7 +7,7 @@ from matplotlib.ticker import FormatStrFormatter
 import pandas as pd
 
 from data.planning.planning_sch_bilevel_lowdim import data, scheduling_data
-from hierarchy.planning.Planning_Scheduling_bi import scheduling_Asia
+from hierarchy.planning.Planning_Scheduling_Control_all import scheduling_Asia_bi_complete
 
 np.random.seed(0)
 
@@ -44,24 +44,36 @@ for i in range(N_samples):
         prod = np.exp(np.random.random_sample()*np.log(upper_lim[p]))
         input[None]['Prod'][p] = prod
         df[p] += [prod]
-    # res_Sch = scheduling_Asia(scheduling_data)
     try:
-        res_Sch = scheduling_Asia(scheduling_data)
+        res_Sch = scheduling_Asia_bi_complete(scheduling_data)
         changeover = pyo.value(res_Sch.CCH_cost)
         storage = pyo.value(res_Sch.st_cost)/20
+        energy = pyo.value(sum(
+                res_Sch.energy_PA1[n] + res_Sch.energy_PA2[n] + \
+                res_Sch.energy_PB1[n] + res_Sch.energy_PB2[n] + \
+                res_Sch.energy_TEE1[n] + res_Sch.energy_TEE2[n] + \
+                res_Sch.energy_TGE1[n] + res_Sch.energy_TGE2[n] + \
+                res_Sch.energy_TI1[n] + res_Sch.energy_TI2[n] for n in res_Sch.N
+            ))/12000
         feas = 1
     except:
         changeover = 100/12
         storage = 10/12
+        energy = 10/12
         feas = 0
-    df['cost'] += [changeover + storage]
+    df['cost'] += [changeover + storage + energy]
     df['feas'] += [feas]
+
 
 dataframe = pd.DataFrame.from_dict(df)
 try:
-    dir = './data/scheduling/scheduling_test'
+    dir = './data/scheduling/scheduling_integr'
     dataframe.to_csv(dir) 
 except:
-    dir = '../data/scheduling/scheduling_test'
+    dir = '../data/scheduling/scheduling_integr'
     dataframe.to_csv(dir) 
 
+
+
+
+    

@@ -10,12 +10,20 @@ Created on Sun Feb  7 18:51:19 2021
 import time
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from functools import partial
 
 import pyomo.environ as pyo
 from pyomo.opt import SolverStatus, TerminationCondition
+
+import onnx
+from omlt import OmltBlock, OffsetScaling
+from omlt.neuralnet import FullSpaceNNFormulation, NetworkDefinition
+from omlt.io import load_onnx_neural_network
+
+from omlt.neuralnet import ReluBigMFormulation
 
 from data.planning.planning_sch_bilevel import data as import_data
 from data.planning.planning_sch_bilevel import scheduling_data
@@ -26,6 +34,198 @@ def state_to_control_t(t, N_t, T_set):
     T_min = T_set[0]
     idx = 1 + (t - T_min) // int(N_total/N_t)
     return min(idx, N_t)
+
+try:
+    dir = './data/CS2_Sampling/Batch_Reactor_NN_PA'
+    df = pd.read_csv(dir) 
+except:
+    dir = '../data/CS2_Sampling/Batch_Reactor_NN_PA'
+    df = pd.read_csv(dir) 
+inputs = ['conc_end']
+outputs = ['tf','utility']
+
+dfin = df[inputs]
+dfout = df[outputs]
+
+#Scaling
+x_offset, x_factor = dfin.mean().to_dict(), dfin.std().to_dict()
+y_offset, y_factor = dfout.mean().to_dict(), dfout.std().to_dict()
+
+dfin = (dfin - dfin.mean()).divide(dfin.std())
+dfout = (dfout - dfout.mean()).divide(dfout.std())
+
+#Save the scaling parameters of the inputs for OMLT
+scaled_lb = dfin.min()[inputs].values
+scaled_ub = dfin.max()[inputs].values
+scaled_input_bounds = {i: (scaled_lb[i], scaled_ub[i]) for i in range(len(inputs))}
+# scaling factors
+scaler = OffsetScaling(
+        offset_inputs={i: x_offset[inputs[i]] for i in range(len(inputs))},
+        factor_inputs={i: x_factor[inputs[i]] for i in range(len(inputs))},
+        offset_outputs={i: y_offset[outputs[i]] for i in range(len(outputs))},
+        factor_outputs={i: y_factor[outputs[i]] for i in range(len(outputs))}
+    )
+
+try:
+    dir = './results/Models/CS2_ReLU_PA.onnx'
+    onnx_model = onnx.load(dir)
+except:
+    dir = '../results/Models/CS2_ReLU_PA.onnx'
+    onnx_model = onnx.load(dir)
+net = load_onnx_neural_network(onnx_model, scaler, scaled_input_bounds)
+
+
+try:
+    dir = './data/CS2_Sampling/Batch_Reactor_NN_PB'
+    df = pd.read_csv(dir) 
+except:
+    dir = '../data/CS2_Sampling/Batch_Reactor_NN_PB'
+    df = pd.read_csv(dir)
+
+dfin_PB = df[inputs]
+dfout_PB = df[outputs]
+
+#Scaling
+x_offset, x_factor = dfin_PB.mean().to_dict(), dfin_PB.std().to_dict()
+y_offset, y_factor = dfout_PB.mean().to_dict(), dfout_PB.std().to_dict()
+
+dfin_PB = (dfin_PB - dfin_PB.mean()).divide(dfin_PB.std())
+dfout_PB = (dfout_PB - dfout_PB.mean()).divide(dfout_PB.std())
+
+#Save the scaling parameters of the inputs for OMLT
+scaled_lb = dfin_PB.min()[inputs].values
+scaled_ub = dfin_PB.max()[inputs].values
+scaled_input_bounds_PB = {i: (scaled_lb[i], scaled_ub[i]) for i in range(len(inputs))}
+# scaling factors
+scaler_PB = OffsetScaling(
+        offset_inputs={i: x_offset[inputs[i]] for i in range(len(inputs))},
+        factor_inputs={i: x_factor[inputs[i]] for i in range(len(inputs))},
+        offset_outputs={i: y_offset[outputs[i]] for i in range(len(outputs))},
+        factor_outputs={i: y_factor[outputs[i]] for i in range(len(outputs))}
+    )
+
+try:
+    dir = './results/Models/CS2_ReLU_PB.onnx'
+    onnx_model = onnx.load(dir)
+except:
+    dir = '../results/Models/CS2_ReLU_PB.onnx'
+    onnx_model = onnx.load(dir)
+net_PB = load_onnx_neural_network(onnx_model, scaler_PB, scaled_input_bounds_PB)
+
+
+try:
+    dir = './data/CS2_Sampling/Batch_Reactor_NN_TEE'
+    df = pd.read_csv(dir) 
+except:
+    dir = '../data/CS2_Sampling/Batch_Reactor_NN_TEE'
+    df = pd.read_csv(dir)
+
+dfin_TEE = df[inputs]
+dfout_TEE = df[outputs]
+
+#Scaling
+x_offset, x_factor = dfin_TEE.mean().to_dict(), dfin_TEE.std().to_dict()
+y_offset, y_factor = dfout_TEE.mean().to_dict(), dfout_TEE.std().to_dict()
+
+dfin_TEE = (dfin_TEE - dfin_TEE.mean()).divide(dfin_TEE.std())
+dfout_TEE = (dfout_TEE - dfout_TEE.mean()).divide(dfout_TEE.std())
+
+#Save the scaling parameters of the inputs for OMLT
+scaled_lb = dfin_TEE.min()[inputs].values
+scaled_ub = dfin_TEE.max()[inputs].values
+scaled_input_bounds_TEE = {i: (scaled_lb[i], scaled_ub[i]) for i in range(len(inputs))}
+# scaling factors
+scaler_TEE = OffsetScaling(
+        offset_inputs={i: x_offset[inputs[i]] for i in range(len(inputs))},
+        factor_inputs={i: x_factor[inputs[i]] for i in range(len(inputs))},
+        offset_outputs={i: y_offset[outputs[i]] for i in range(len(outputs))},
+        factor_outputs={i: y_factor[outputs[i]] for i in range(len(outputs))}
+    )
+
+try:
+    dir = './results/Models/CS2_ReLU_TEE.onnx'
+    onnx_model = onnx.load(dir)
+except:
+    dir = '../results/Models/CS2_ReLU_TEE.onnx'
+    onnx_model = onnx.load(dir)
+net_TEE = load_onnx_neural_network(onnx_model, scaler_TEE, scaled_input_bounds_TEE)
+
+
+try:
+    dir = './data/CS2_Sampling/Batch_Reactor_NN_TGE'
+    df = pd.read_csv(dir) 
+except:
+    dir = '../data/CS2_Sampling/Batch_Reactor_NN_TGE'
+    df = pd.read_csv(dir)
+
+dfin_TGE = df[inputs]
+dfout_TGE = df[outputs]
+
+#Scaling
+x_offset, x_factor = dfin_TGE.mean().to_dict(), dfin_TGE.std().to_dict()
+y_offset, y_factor = dfout_TGE.mean().to_dict(), dfout_TGE.std().to_dict()
+
+dfin_TGE = (dfin_TGE - dfin_TGE.mean()).divide(dfin_TGE.std())
+dfout_TGE = (dfout_TGE - dfout_TGE.mean()).divide(dfout_TGE.std())
+
+#Save the scaling parameters of the inputs for OMLT
+scaled_lb = dfin_TGE.min()[inputs].values
+scaled_ub = dfin_TGE.max()[inputs].values
+scaled_input_bounds_TGE = {i: (scaled_lb[i], scaled_ub[i]) for i in range(len(inputs))}
+# scaling factors
+scaler_TGE = OffsetScaling(
+        offset_inputs={i: x_offset[inputs[i]] for i in range(len(inputs))},
+        factor_inputs={i: x_factor[inputs[i]] for i in range(len(inputs))},
+        offset_outputs={i: y_offset[outputs[i]] for i in range(len(outputs))},
+        factor_outputs={i: y_factor[outputs[i]] for i in range(len(outputs))}
+    )
+
+try:
+    dir = './results/Models/CS2_ReLU_TGE.onnx'
+    onnx_model = onnx.load(dir)
+except:
+    dir = '../results/Models/CS2_ReLU_TGE.onnx'
+    onnx_model = onnx.load(dir)
+net_TGE = load_onnx_neural_network(onnx_model, scaler_TGE, scaled_input_bounds_TGE)
+
+
+try:
+    dir = './data/CS2_Sampling/Batch_Reactor_NN_TI'
+    df = pd.read_csv(dir) 
+except:
+    dir = '../data/CS2_Sampling/Batch_Reactor_NN_TI'
+    df = pd.read_csv(dir)
+
+dfin_TI = df[inputs]
+dfout_TI = df[outputs]
+
+#Scaling
+x_offset, x_factor = dfin_TI.mean().to_dict(), dfin_TI.std().to_dict()
+y_offset, y_factor = dfout_TI.mean().to_dict(), dfout_TI.std().to_dict()
+
+dfin_TI = (dfin_TI - dfin_TI.mean()).divide(dfin_TI.std())
+dfout_TI = (dfout_TI - dfout_TI.mean()).divide(dfout_TI.std())
+
+#Save the scaling parameters of the inputs for OMLT
+scaled_lb = dfin_TI.min()[inputs].values
+scaled_ub = dfin_TI.max()[inputs].values
+scaled_input_bounds_TI = {i: (scaled_lb[i], scaled_ub[i]) for i in range(len(inputs))}
+# scaling factors
+scaler_TI = OffsetScaling(
+        offset_inputs={i: x_offset[inputs[i]] for i in range(len(inputs))},
+        factor_inputs={i: x_factor[inputs[i]] for i in range(len(inputs))},
+        offset_outputs={i: y_offset[outputs[i]] for i in range(len(outputs))},
+        factor_outputs={i: y_factor[outputs[i]] for i in range(len(outputs))}
+    )
+
+try:
+    dir = './results/Models/CS2_ReLU_TI.onnx'
+    onnx_model = onnx.load(dir)
+except:
+    dir = '../results/Models/CS2_ReLU_TI.onnx'
+    onnx_model = onnx.load(dir)
+net_TI = load_onnx_neural_network(onnx_model, scaler_TI, scaled_input_bounds_TI)
+
 
 
 def centralised(data, fix_TP=False):
@@ -344,36 +544,39 @@ def centralised(data, fix_TP=False):
     # solver = pyo.SolverFactory("mosek")
     # solver = pyo.SolverFactory("bonmin")
     solver = pyo.SolverFactory("gurobi_direct")
+    solver.options['TimeLimit'] = 300
     solver.solve(ins)
 
     return ins
 
 
-def scheduling_Asia(data, tightened=True):
 
-    model = pyo.AbstractModel()
-    model.N = pyo.Set()
-    model.I = pyo.Set()
-    model.R = pyo.Set()
-    model.states = pyo.Set()
+def scheduling_Asia_bi_complete(data, tightened=True):
 
-    model.tasks = pyo.Set(within = model.R*model.I)
-    model.N_last = pyo.Param()
-    model.alpha = pyo.Param(model.I)
-    model.beta = pyo.Param(model.I)
-    model.H = pyo.Param()
-    model.Bmin = pyo.Param(model.I)
-    model.Bmax = pyo.Param(model.I)
-    model.rho = pyo.Param(model.I, model.states)
-    model.S_in = pyo.Set(within = model.I*model.states)
-    model.S_out = pyo.Set(within = model.I*model.states)
-    model.in_s = pyo.Set(within = model.states*model.I)
-    model.out_s = pyo.Set(within = model.states*model.I)
-    model.Prod = pyo.Param(model.states)
-    model.proc_time = pyo.Param(model.I, model.I)
-    model.kappa = pyo.Param(model.I, model.I)
-    model.S0 = pyo.Param(model.states)
-    model.CS = pyo.Param(model.states)
+    model = pyo.ConcreteModel()
+    model.N = pyo.Set(initialize=data[None]['N'])
+    model.I = pyo.Set(initialize=data[None]['I'])
+    model.R = pyo.Set(initialize=data[None]['R'])
+    model.states = pyo.Set(initialize=data[None]['states'])
+
+    model.tasks = pyo.Set(within = model.R*model.I, initialize=data[None]['tasks'])
+    model.N_last = pyo.Param(initialize=data[None]['N_last'])
+    model.alpha = pyo.Param(model.I, initialize=data[None]['alpha'])
+    model.beta = pyo.Param(model.I, initialize=data[None]['beta'])
+    # model.beta_var = pyo.Var(model.I, within=pyo.NonNegativeReals)
+    model.H = pyo.Param(initialize=data[None]['H'])
+    model.Bmin = pyo.Param(model.I, initialize=data[None]['Bmin'])
+    model.Bmax = pyo.Param(model.I, initialize=data[None]['Bmax'])
+    model.rho = pyo.Param(model.I, model.states, initialize=data[None]['rho'])
+    model.S_in = pyo.Set(within = model.I*model.states, initialize=data[None]['S_in'])
+    model.S_out = pyo.Set(within = model.I*model.states, initialize=data[None]['S_out'])
+    model.in_s = pyo.Set(within = model.states*model.I, initialize=data[None]['in_s'])
+    model.out_s = pyo.Set(within = model.states*model.I, initialize=data[None]['out_s'])
+    model.Prod = pyo.Param(model.states, initialize=data[None]['Prod'])
+    model.proc_time = pyo.Param(model.I, model.I, initialize=data[None]['proc_time'])
+    model.kappa = pyo.Param(model.I, model.I, initialize=data[None]['kappa'])
+    model.S0 = pyo.Param(model.states, initialize=data[None]['S0'])
+    model.CS = pyo.Param(model.states, initialize=data[None]['CS'])
 
     model.T = pyo.Var(model.N, within=pyo.NonNegativeReals)
     model.Ts = pyo.Var(model.I, model.N, within=pyo.NonNegativeReals)
@@ -398,6 +601,208 @@ def scheduling_Asia(data, tightened=True):
 
     model.CCH_cost = pyo.Var()
     model.st_cost = pyo.Var()
+
+    model.linking = pyo.ConstraintList()
+
+    model.tf_PA1 = pyo.Var(model.N)
+    model.tf_PA2 = pyo.Var(model.N)
+    model.energy_PA1 = pyo.Var(model.N)
+    model.energy_PA2 = pyo.Var(model.N)
+
+    model.NNPA1_0 = OmltBlock()
+    model.NNPA1_1 = OmltBlock()
+    model.NNPA1_2 = OmltBlock()
+    model.NNPA1_3 = OmltBlock()
+    model.NNPA1_4 = OmltBlock()
+    model.NNPA1_5 = OmltBlock()
+    model.NNPA1_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNPA1_0.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_1.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_2.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_3.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_4.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_5.build_formulation(ReluBigMFormulation(net))
+    model.NNPA1_6.build_formulation(ReluBigMFormulation(net))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['PA1',0] == model.NNPA1_0.inputs[0])
+    model.linking.add(model.Bs['PA1',1] == model.NNPA1_1.inputs[0])
+    model.linking.add(model.Bs['PA1',2] == model.NNPA1_2.inputs[0])
+    model.linking.add(model.Bs['PA1',3] == model.NNPA1_3.inputs[0])
+    model.linking.add(model.Bs['PA1',4] == model.NNPA1_4.inputs[0])
+    model.linking.add(model.Bs['PA1',5] == model.NNPA1_5.inputs[0])
+    model.linking.add(model.Bs['PA1',6] == model.NNPA1_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_PA1[0] == model.NNPA1_0.outputs[0])
+    model.linking.add(model.tf_PA1[1] == model.NNPA1_1.outputs[0])
+    model.linking.add(model.tf_PA1[2] == model.NNPA1_2.outputs[0])
+    model.linking.add(model.tf_PA1[3] == model.NNPA1_3.outputs[0])
+    model.linking.add(model.tf_PA1[4] == model.NNPA1_4.outputs[0])
+    model.linking.add(model.tf_PA1[5] == model.NNPA1_5.outputs[0])
+    model.linking.add(model.tf_PA1[6] == model.NNPA1_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_PA1[0] == model.NNPA1_0.outputs[1])
+    model.linking.add(model.energy_PA1[1] == model.NNPA1_1.outputs[1])
+    model.linking.add(model.energy_PA1[2] == model.NNPA1_2.outputs[1])
+    model.linking.add(model.energy_PA1[3] == model.NNPA1_3.outputs[1])
+    model.linking.add(model.energy_PA1[4] == model.NNPA1_4.outputs[1])
+    model.linking.add(model.energy_PA1[5] == model.NNPA1_5.outputs[1])
+    model.linking.add(model.energy_PA1[6] == model.NNPA1_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+    model.NNPA2_0 = OmltBlock()
+    model.NNPA2_1 = OmltBlock()
+    model.NNPA2_2 = OmltBlock()
+    model.NNPA2_3 = OmltBlock()
+    model.NNPA2_4 = OmltBlock()
+    model.NNPA2_5 = OmltBlock()
+    model.NNPA2_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNPA2_0.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_1.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_2.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_3.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_4.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_5.build_formulation(ReluBigMFormulation(net))
+    model.NNPA2_6.build_formulation(ReluBigMFormulation(net))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['PA2',0] == model.NNPA2_0.inputs[0])
+    model.linking.add(model.Bs['PA2',1] == model.NNPA2_1.inputs[0])
+    model.linking.add(model.Bs['PA2',2] == model.NNPA2_2.inputs[0])
+    model.linking.add(model.Bs['PA2',3] == model.NNPA2_3.inputs[0])
+    model.linking.add(model.Bs['PA2',4] == model.NNPA2_4.inputs[0])
+    model.linking.add(model.Bs['PA2',5] == model.NNPA2_5.inputs[0])
+    model.linking.add(model.Bs['PA2',6] == model.NNPA2_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_PA2[0] == model.NNPA2_0.outputs[0])
+    model.linking.add(model.tf_PA2[1] == model.NNPA2_1.outputs[0])
+    model.linking.add(model.tf_PA2[2] == model.NNPA2_2.outputs[0])
+    model.linking.add(model.tf_PA2[3] == model.NNPA2_3.outputs[0])
+    model.linking.add(model.tf_PA2[4] == model.NNPA2_4.outputs[0])
+    model.linking.add(model.tf_PA2[5] == model.NNPA2_5.outputs[0])
+    model.linking.add(model.tf_PA2[6] == model.NNPA2_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_PA2[0] == model.NNPA2_0.outputs[1])
+    model.linking.add(model.energy_PA2[1] == model.NNPA2_1.outputs[1])
+    model.linking.add(model.energy_PA2[2] == model.NNPA2_2.outputs[1])
+    model.linking.add(model.energy_PA2[3] == model.NNPA2_3.outputs[1])
+    model.linking.add(model.energy_PA2[4] == model.NNPA2_4.outputs[1])
+    model.linking.add(model.energy_PA2[5] == model.NNPA2_5.outputs[1])
+    model.linking.add(model.energy_PA2[6] == model.NNPA2_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+    
+    model.tf_PB1 = pyo.Var(model.N)
+    model.tf_PB2 = pyo.Var(model.N)
+    model.energy_PB1 = pyo.Var(model.N)
+    model.energy_PB2 = pyo.Var(model.N)
+
+    model.NNPB1_0 = OmltBlock()
+    model.NNPB1_1 = OmltBlock()
+    model.NNPB1_2 = OmltBlock()
+    model.NNPB1_3 = OmltBlock()
+    model.NNPB1_4 = OmltBlock()
+    model.NNPB1_5 = OmltBlock()
+    model.NNPB1_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNPB1_0.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_1.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_2.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_3.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_4.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_5.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB1_6.build_formulation(ReluBigMFormulation(net_PB))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['PB1',0] == model.NNPB1_0.inputs[0])
+    model.linking.add(model.Bs['PB1',1] == model.NNPB1_1.inputs[0])
+    model.linking.add(model.Bs['PB1',2] == model.NNPB1_2.inputs[0])
+    model.linking.add(model.Bs['PB1',3] == model.NNPB1_3.inputs[0])
+    model.linking.add(model.Bs['PB1',4] == model.NNPB1_4.inputs[0])
+    model.linking.add(model.Bs['PB1',5] == model.NNPB1_5.inputs[0])
+    model.linking.add(model.Bs['PB1',6] == model.NNPB1_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_PB1[0] == model.NNPB1_0.outputs[0])
+    model.linking.add(model.tf_PB1[1] == model.NNPB1_1.outputs[0])
+    model.linking.add(model.tf_PB1[2] == model.NNPB1_2.outputs[0])
+    model.linking.add(model.tf_PB1[3] == model.NNPB1_3.outputs[0])
+    model.linking.add(model.tf_PB1[4] == model.NNPB1_4.outputs[0])
+    model.linking.add(model.tf_PB1[5] == model.NNPB1_5.outputs[0])
+    model.linking.add(model.tf_PB1[6] == model.NNPB1_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_PB1[0] == model.NNPB1_0.outputs[1])
+    model.linking.add(model.energy_PB1[1] == model.NNPB1_1.outputs[1])
+    model.linking.add(model.energy_PB1[2] == model.NNPB1_2.outputs[1])
+    model.linking.add(model.energy_PB1[3] == model.NNPB1_3.outputs[1])
+    model.linking.add(model.energy_PB1[4] == model.NNPB1_4.outputs[1])
+    model.linking.add(model.energy_PB1[5] == model.NNPB1_5.outputs[1])
+    model.linking.add(model.energy_PB1[6] == model.NNPB1_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
+    model.NNPB2_0 = OmltBlock()
+    model.NNPB2_1 = OmltBlock()
+    model.NNPB2_2 = OmltBlock()
+    model.NNPB2_3 = OmltBlock()
+    model.NNPB2_4 = OmltBlock()
+    model.NNPB2_5 = OmltBlock()
+    model.NNPB2_6 = OmltBlock()
+    # model.NN_7 = OmltBlock()
+
+    model.NNPB2_0.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_1.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_2.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_3.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_4.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_5.build_formulation(ReluBigMFormulation(net_PB))
+    model.NNPB2_6.build_formulation(ReluBigMFormulation(net_PB))
+    # model.NN_7.build_formulation(ReluBigMFormulation(net))
+
+    model.linking.add(model.Bs['PB2',0] == model.NNPB2_0.inputs[0])
+    model.linking.add(model.Bs['PB2',1] == model.NNPB2_1.inputs[0])
+    model.linking.add(model.Bs['PB2',2] == model.NNPB2_2.inputs[0])
+    model.linking.add(model.Bs['PB2',3] == model.NNPB2_3.inputs[0])
+    model.linking.add(model.Bs['PB2',4] == model.NNPB2_4.inputs[0])
+    model.linking.add(model.Bs['PB2',5] == model.NNPB2_5.inputs[0])
+    model.linking.add(model.Bs['PB2',6] == model.NNPB2_6.inputs[0])
+    # m.linking.add(m.vol['Reaction','Reactor',7] == m.NN_7.inputs[0])
+
+    # # #Output tf
+    model.linking.add(model.tf_PB2[0] == model.NNPB2_0.outputs[0])
+    model.linking.add(model.tf_PB2[1] == model.NNPB2_1.outputs[0])
+    model.linking.add(model.tf_PB2[2] == model.NNPB2_2.outputs[0])
+    model.linking.add(model.tf_PB2[3] == model.NNPB2_3.outputs[0])
+    model.linking.add(model.tf_PB2[4] == model.NNPB2_4.outputs[0])
+    model.linking.add(model.tf_PB2[5] == model.NNPB2_5.outputs[0])
+    model.linking.add(model.tf_PB2[6] == model.NNPB2_6.outputs[0])
+    # m.linking.add(m.tf['Reactor',7] == m.NN_7.outputs[0])
+
+    # # Output Q
+    model.linking.add(model.energy_PB2[0] == model.NNPB2_0.outputs[1])
+    model.linking.add(model.energy_PB2[1] == model.NNPB2_1.outputs[1])
+    model.linking.add(model.energy_PB2[2] == model.NNPB2_2.outputs[1])
+    model.linking.add(model.energy_PB2[3] == model.NNPB2_3.outputs[1])
+    model.linking.add(model.energy_PB2[4] == model.NNPB2_4.outputs[1])
+    model.linking.add(model.energy_PB2[5] == model.NNPB2_5.outputs[1])
+    model.linking.add(model.energy_PB2[6] == model.NNPB2_6.outputs[1])
+    # m.linking.add(m.Q['Reaction','Reactor',7] == m.NN_7.outputs[1])
+
 
     ## Initial state
     def init(m, s):
@@ -439,9 +844,30 @@ def scheduling_Asia(data, tightened=True):
     ###      ###
 
     ## Duration, finish time, and time-matching constraints
+
     def constr7(m, i, n):
-        return m.D[i, n] == m.alpha[i]*m.Ws[i,n] + m.beta[i]*m.Bs[i,n]
+        if i[:-1] != 'PA' and i[:-1] != 'PB':
+            return m.D[i, n] == m.alpha[i]*m.Ws[i,n] + m.beta[i]*m.Bs[i,n]
+        elif i=='PA1':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_PA1[n])*m.Ws[i,n]
+        elif i=='PA2':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_PA2[n])*m.Ws[i,n]
+        elif i=='PB1':
+            return m.D[i, n] == (m.alpha[i]+ m.tf_PB1[n])*m.Ws[i,n]
+        else:
+            return m.D[i, n] == (m.alpha[i]+ m.tf_PB2[n])*m.Ws[i,n]
     model.c7 = pyo.Constraint(model.I, model.N, rule=constr7)
+
+    # def constr7(m, i, n):
+    #     return m.D[i, n] == m.alpha[i]*m.Ws[i,n] + m.beta[i]*m.Bs[i,n]
+    # model.c7 = pyo.Constraint(model.I, model.N, rule=constr7)
+
+    # def constr7(m, i, n):
+    #     return m.D[i, n] == m.alpha[i]*m.Ws[i,n] + m.beta_var[i]*m.Bs[i,n]
+    # model.c7 = pyo.Constraint(model.I, model.N, rule=constr7)
+    # def constr7plus(m, i):
+    #     return m.beta[i] == m.beta_var[i]
+    # model.c7plus = pyo.Constraint(model.I, rule=constr7plus)
     def constr7bis(m, i, n):
         if n+1 <= m.N_last:
             return m.T_CCH[i,n] == sum(m.proc_time[i,i_]*m.Y[i,i_, n+1] for i_ in m.I)
@@ -544,7 +970,7 @@ def scheduling_Asia(data, tightened=True):
     model.c20 = pyo.Constraint(model.states, model.N, rule=constr20)
 
     def o(m):
-        return m.MS + 1*sum(m.Y[i,i_,n]/1e10 for i in m.I for i_ in m.I for n in m.N)
+        return m.MS + 1*sum(m.Y[i,i_,n]/1e10 for i in m.I for i_ in m.I for n in m.N) # + sum(m.energy_1[n] + m.energy_2[n] for n in m.N
     model.obj = pyo.Objective(rule=o)
 
     # Meet demand
@@ -583,13 +1009,11 @@ def scheduling_Asia(data, tightened=True):
             )
     model.c_storage = pyo.Constraint(rule=constr_storage)
 
-    ins = model.create_instance(data)
-
     solver = pyo.SolverFactory("gurobi_direct")
     # solver.options['TimeLimit'] = 60.
-    res = solver.solve(ins)
+    res = solver.solve(model)
 
-    return ins
+    return model
 
 def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
     
@@ -740,7 +1164,7 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 
 # t0 = time.time()
 
-# res_Sch = scheduling_Asia(scheduling_data)
+# res_Sch = scheduling_Asia_bi_complete(scheduling_data)
 # print('Objective: ', pyo.value(res_Sch.obj))
 # print('Makeover: ',  pyo.value(res_Sch.MS))
 # print(pyo.value(res_Sch.S['AI',0]))
@@ -748,9 +1172,13 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 # print(pyo.value(res_Sch.S['TI',res_Sch.N_last]))
 # print(pyo.value(res_Sch.S['PA',res_Sch.N_last]))
 
+# energy_PA = sum(res_Sch.energy_PA1[n] + res_Sch.energy_PA2[n] for n in res_Sch.N)
+# print(f"Energy cost PA: {pyo.value(energy_PA)}")
+# energy_PB = sum(res_Sch.energy_PB1[n] + res_Sch.energy_PB2[n] for n in res_Sch.N)
+# print(f"Energy cost PB: {pyo.value(energy_PB)}")
+
 
 # t1 = time.time()
-
 
 # print('Tightened: ', (t1-t0))
 
@@ -832,11 +1260,11 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 # print(f"Storage cost: {pyo.value(res_Sch.st_cost)*24}")
 # print(f"Changeover cost: {pyo.value(res_Sch.CCH_cost)*24}")
 
-
-
 # labels = ['Machine 1', 'Machine 2']
 # plt.yticks([0, 1], labels=labels)
 # plt.show()
 # plt.clf()
 # # plt.savefig('test.png')
+
+# ## 
 

@@ -255,8 +255,8 @@ def get_cost_bi(input_data, Production, TP, Sales, penalization=1):
     # print('Average input to scheduling problem: ', scheduling_data[None]['Prod'])
     try:
         res_Sch = scheduling_Asia(scheduling_data)
-        changeover = pyo.value(res_Sch.CCH_cost)*24
-        storage = pyo.value(res_Sch.st_cost)*24/20
+        changeover = pyo.value(res_Sch.CCH_cost)*12
+        storage = pyo.value(res_Sch.st_cost)*12/20
     except:
         changeover = 100.
         storage = 10
@@ -426,8 +426,8 @@ def get_cost_tri(input_data, Production, TP, Sales, penalization=1):
     # print('Average input to scheduling problem: ', scheduling_data[None]['Prod'])
     try:
         res_Sch = scheduling_Asia_bi(scheduling_data)
-        changeover = pyo.value(res_Sch.CCH_cost)*24
-        storage = pyo.value(res_Sch.st_cost)*24/20
+        changeover = pyo.value(res_Sch.CCH_cost)*12
+        storage = pyo.value(res_Sch.st_cost)*12/20
         energy = pyo.value(sum(res_Sch.energy_1[n] + res_Sch.energy_2[n] for n in res_Sch.N))/1000
     except:
         changeover = 100.
@@ -753,7 +753,7 @@ tri = dfo_tri_f(pybobyqa['x_best_so_far'][-1])
 t1 = time.time()
 bi_opt['tri'] = {'time': t1 - t0, 'obj': tri}
 
-with open('./results/optima/bi_Py-BOBYQA.json', 'w') as f:
+with open('./results/optima/bi_Py-BOBYQA_limit.json', 'w') as f:
     json.dump(bi_opt, f)
 
 
@@ -836,7 +836,7 @@ tri = dfo_tri_f(pybobyqa['x_best_so_far'][-1])
 t1 = time.time()
 tri_opt['tri'] = {'time': t1 - t0, 'obj': tri}
 
-with open('./results/optima/tri_Py-BOBYQA.json', 'w') as f:
+with open('./results/optima/tri_Py-BOBYQA_limit.json', 'w') as f:
     json.dump(tri_opt, f)
 
 # s = 'CUATRO-l'

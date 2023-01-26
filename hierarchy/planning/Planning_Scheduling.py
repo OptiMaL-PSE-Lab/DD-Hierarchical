@@ -8,7 +8,7 @@ Created on Sun Feb  7 18:51:19 2021
 ### TO DO: BO + split into problems and benchmarks ###
 
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from functools import partial
 
 import pyomo.environ as pyo

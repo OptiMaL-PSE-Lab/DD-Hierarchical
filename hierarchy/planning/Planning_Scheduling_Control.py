@@ -25,8 +25,8 @@ from omlt.io import load_onnx_neural_network
 
 from omlt.neuralnet import ReluBigMFormulation
 
-from data.planning.planning_sch_bilevel import data as import_data
-from data.planning.planning_sch_bilevel import scheduling_data
+from data.planning.planning_sch_bilevel_lowdim import data as import_data
+from data.planning.planning_sch_bilevel_lowdim import scheduling_data
 
 try:
     dir = './data/CS2_Sampling/Batch_Reactor_NN_PA'
@@ -874,6 +874,14 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
     return Storage, Demand
 
 
+# plt.rcParams["font.family"] = "Times New Roman"
+# ft = int(13)
+# font = {'size': ft}
+# plt.rc('font', **font)
+# params = {'legend.fontsize': 12.5,
+#               'legend.handlelength': 2}
+# plt.rcParams.update(params)
+
 # Nt=5
 # import_data[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
 # t0 = time.time()
@@ -958,11 +966,13 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 
 
 # bar_style = {'alpha':1.0, 'lw':25, 'solid_capstyle':'butt'}
-# text_style = {'color':'white', 'weight':'light', 'ha':'center', 'va':'center'}
+# text_style = {'color':'white', 'weight':'bold', 'ha':'center', 'va':'center'}
 # colors = mpl.cm.Dark2.colors
 
 # U1_I_list = ['TI1', 'TEE1', 'TGE1', 'PA1', 'PB1']
 # U2_I_list = ['TI2', 'TEE2', 'TGE2', 'PA2', 'PB2']
+
+# plt.figure(figsize=(7,4))
 
 # for n in res_Sch.N:
 #     t = pyo.value(res_Sch.T[n])
@@ -995,14 +1005,14 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 #             else:
 #                 k = U2_I_list.index(i)
 #             plt.plot([ts, tf], [j]*2, c=colors[k%5], **bar_style)
-#             plt.text((ts + tf)/2, j, text, **text_style, fontsize=10)
+#             plt.text((ts + tf)/2, j, text, **text_style, fontsize=11)
 
 # print(f"Storage cost: {pyo.value(res_Sch.st_cost)*24}")
 # print(f"Changeover cost: {pyo.value(res_Sch.CCH_cost)*24}")
 
 # labels = ['Machine 1', 'Machine 2']
 # plt.yticks([0, 1], labels=labels)
-# plt.show()
-# plt.clf()
-# # plt.savefig('test.png')
+# # plt.show()
+# # plt.clf()
+# plt.savefig('results/Figures/x0_sch_ctrl.svg')
 

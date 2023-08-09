@@ -1,18 +1,30 @@
 import warnings
 import argparse
+import time
+
+import multiprocessing as mp
 # from time import perf_counter, sleep
 # import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 # from IPython.display import Image
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, accuracy_score
 
 import torch
 import torch.nn as nn
 # import torch.nn.functional as F
 import lightgbm as lgb
+
+from functools import partial
+
+from omlt.io import write_onnx_model_with_bounds
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, accuracy_score
+
 from torch.utils.data import DataLoader, TensorDataset
+
+from onnxmltools.convert.lightgbm.convert import convert
+from skl2onnx.common.data_types import FloatTensorType
 
 # from omlt.io import (
 #     write_onnx_model_with_bounds, 
@@ -60,6 +72,226 @@ def moving_average(array, N_av=10):
         dummy[i] = np.mean(array[i - min(9, i):i+1])
     return dummy
 
+def save_NN(model, scaled_bounds, dir):
+    x = torch.randn(32, 4)
+    try:
+        model.forward(x)
+        torch.onnx.export(
+            model,
+            x,
+            dir,
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'},
+            }
+        )
+        print(f"Wrote PyTorch model to {dir}")
+    except:
+        model.forward(x)
+        torch.onnx.export(
+            model,
+            x,
+            '.'+dir,
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'},
+            }
+        )
+        print(f"Wrote PyTorch model to {'.'+dir}")
+    write_onnx_model_with_bounds(dir, None, scaled_bounds)
+        
+def save_Tree(lgbm_model, dir):
+    float_tensor_type = FloatTensorType([None, lgbm_model.num_feature()])
+    initial_types = [('float_input', float_tensor_type)]
+    onnx_model = convert(lgbm_model, 
+                         initial_types=initial_types, 
+                         target_opset=8)
+    try:
+        with open(dir, "wb") as onnx_file:
+            onnx_file.write(onnx_model.SerializeToString())
+            print(f"Onnx model written to {onnx_file.name}")
+    except:
+        with open('.'+dir, "wb") as onnx_file:
+            onnx_file.write(onnx_model.SerializeToString())
+            print(f"Onnx model written to {onnx_file.name}")
+    
+def save_model(model, scaled_bounds, dir, model_type):
+    if model_type=='ClassNN' or model_type=='RegNN':
+        save_NN(model, scaled_bounds, dir)
+    elif model_type=='RegTree' or model_type=='ClassTree':
+        save_Tree(model, dir)
+
+def classNN(data_model, EPOCHS):
+    X_train, X_test, y_train, y_test = data_model
+    model = Net2(50,20)
+    criterion = nn.BCEWithLogitsLoss(reduction='sum')
+    # optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    dataset = TensorDataset(torch.as_tensor(X_train, dtype=torch.float32), torch.as_tensor(y_train, dtype=torch.float32))
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    training_loss = np.zeros(EPOCHS)
+    training_ac = np.zeros(EPOCHS)
+    test_ac = np.zeros(EPOCHS)
+    test_loss = np.zeros(EPOCHS)
+    for epoch in range(EPOCHS):
+        count = 0
+        for id_batch, (x_batch, y_batch) in enumerate(dataloader):
+            y_batch_pred = model(x_batch)
+            loss = criterion(y_batch_pred, y_batch.view(*y_batch_pred.shape))
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            pred = np.round(torch.sigmoid(y_batch_pred).detach().numpy())
+            target = np.round(y_batch.detach().numpy())
+            training_ac[epoch] += np.sum(pred==target)
+            training_loss[epoch] += loss.item()
+        training_loss[epoch] = training_loss[epoch]/len(y_train)
+        training_ac[epoch] = training_ac[epoch]/len(y_train)
+        y_test_pred = model(torch.as_tensor(X_test, dtype=torch.float32))
+        test_loss[epoch] += criterion(y_test_pred, torch.as_tensor(y_test, dtype=torch.float32).view(*y_test_pred.shape)).item()/len(y_test)
+        pred = np.round(torch.sigmoid(y_test_pred).detach().numpy())
+        target = np.round(y_test)
+        test_ac[epoch] += np.sum(pred==target)/len(y_test)
+        # if epoch % 50 == 0:
+        #     print(f"Epoch {epoch} accuracy : Training: {training_ac[epoch]}, Test: {test_ac[epoch]}")
+        #     print(f"Epoch {epoch} loss : Training: {training_loss[epoch]}, Test: {test_loss[epoch]}")
+    y_test_pred = model(torch.as_tensor(X_test, dtype=torch.float32))
+    y_train_pred = model(torch.as_tensor(X_train, dtype=torch.float32))
+    test_accuracy = np.sum(np.round(torch.sigmoid(y_test_pred).detach().numpy())==np.round(y_test))/len(y_test)
+    train_accuracy = np.sum(np.round(torch.sigmoid(y_train_pred).detach().numpy())==np.round(y_train))/len(y_train)
+    # print(f"Training accuracy: {train_accuracy}, Test accuracy: {test_accuracy}")
+
+    return test_accuracy, model
+
+def regNN(data_model, EPOCHS):
+    X_train, X_test, y_train, y_test = data_model
+    # model = Net(5, 5)
+    model = Net(50, 20)
+    loss_function = nn.MSELoss(reduction='sum')
+    optimizer = torch.optim.Adam(model.parameters(),lr=0.005)
+    # optimizer = torch.optim.Adam(model.parameters(),lr=0.01)
+    #Split DataSet 
+    dataset = TensorDataset(torch.as_tensor(X_train, dtype=torch.float32), torch.as_tensor(y_train, dtype=torch.float32))
+    # test_dataset = TensorDataset(torch.as_tensort(X_test, dtype=torch.float32), torch.as_tensor(y_test, dtype=torch.float32))
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    training_loss = np.zeros(EPOCHS)
+    test_loss = np.zeros(EPOCHS)
+    for epoch in range(EPOCHS):
+        count = 0
+        for id_batch, (x_batch, y_batch) in enumerate(dataloader):
+            y_batch_pred = model(x_batch)
+            loss = loss_function(y_batch_pred, y_batch.view(*y_batch_pred.shape))
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            training_loss[epoch] += loss.item()
+        training_loss[epoch] = training_loss[epoch]/len(y_train)
+        y_test_pred = model(torch.as_tensor(X_test, dtype=torch.float32))
+        test_loss[epoch] += loss_function(y_test_pred, torch.as_tensor(y_test, dtype=torch.float32).view(*y_test_pred.shape)).item()/len(y_test)
+        # if epoch % 50 == 0:
+        #     print(f"Epoch {epoch} loss : Training: {training_loss[epoch]}, Test: {test_loss[epoch]}")
+    # #Evaluating in the test Set
+    X_in = torch.as_tensor(X_test, dtype=torch.float32)
+    X_train_in = torch.as_tensor(X_train, dtype=torch.float32)
+    y_pred_test = model.forward(X_in) 
+    y_pred_train = model.forward(X_train_in)
+    # plt.scatter(y_test, y_pred_test.detach().numpy(), c='r')
+    # plt.scatter(y_train, y_pred_train.detach().numpy(), c='k')
+    # plt.show()
+
+    mse_relu_train = mean_squared_error(y_train, y_pred_train.detach().numpy())       
+    # print('mse relu in the training set %.6f' %mse_relu_train)
+    mse_relu_test = mean_squared_error(y_test, y_pred_test.detach().numpy())       
+    # print('mse relu in the test set %.6f' %mse_relu_test)
+
+    return mse_relu_test, model
+
+def regTree(data_model, y_offset, y_factor):
+    X_train, X_test, y_train, y_test = data_model
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        PARAMS = {
+            'objective': 'regression',
+            'metric': 'mse',
+            'boosting': 'gbdt',
+            'num_trees': 50,
+            'max_depth': 3,
+            'min_data_in_leaf': 2,
+            'random_state': 100,
+            'verbose': -1
+            }
+        train_data = lgb.Dataset(X_train, 
+                                 label=y_train,
+                                 params={'verbose': -1})
+        model = lgb.train(PARAMS, 
+                          train_data,
+                          verbose_eval=False)
+
+    y_pred_train = model.predict(X_train)
+    y_pred_test = model.predict(X_test)
+    y_pred_test_scaled = (y_pred_test - y_offset['cost'])/y_factor['cost']
+    y_test_scaled = (y_test - y_offset['cost'])/y_factor['cost']
+    mse_train = mean_squared_error(y_train, y_pred_train)
+    mse_test = mean_squared_error(y_test_scaled, y_pred_test_scaled)
+    # print(f"LGB regression MSE: Training: {mse_train}, Testing: {mse_test}")
+
+    return mse_test, model
+
+def classTree(data_model):
+    X_train, X_test, y_train_cl, y_test_cl = data_model
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        PARAMS = {
+            # 'objective': 'binary',
+            # 'metric': 'binary_logloss',
+            'objective': 'regression',
+            'metric': 'mse',
+            'boosting': 'gbdt',
+            'num_trees': 50,
+            'max_depth': 3,
+            'min_data_in_leaf': 2,
+            'random_state': 100,
+            'verbose': -1
+        }
+        
+        train_data = lgb.Dataset(X_train, 
+                             label=y_train_cl,
+                             params={'verbose': -1})
+        model = lgb.train(PARAMS, 
+                      train_data,
+                      verbose_eval=False)
+
+    y_pred_train_cl = model.predict(X_train)
+    y_pred_test_cl = model.predict(X_test)
+    y_pred_test_cl = [max(0, min(1, np.round(y))) for y in y_pred_test_cl]
+    ac_train = accuracy_score(y_train_cl, np.round(y_pred_train_cl))
+    ac_test = accuracy_score(y_test_cl, y_pred_test_cl)
+    # print(f"LGB classification accuracy: Training: {ac_train}, Testing: {ac_test}")
+
+    return ac_test, model
+
+def run_model(data_model, EPOCHS, y_offset, y_factor, model):
+    dfin, dfout, dfin_scaled, dfout_scaled, dfout_class = data_model
+    if model == 'RegTree':
+        data_next = train_test_split(dfin.values, dfout.values, test_size=0.15, random_state=8, shuffle=True)
+        res = regTree(data_next, y_offset, y_factor)
+    elif model == 'ClassTree':
+        data_next = train_test_split(dfin.values, dfout_class.values, test_size=0.15, random_state=8, shuffle=True)
+        res = classTree(data_next)
+    elif model == 'RegNN':
+        data_next = train_test_split(dfin_scaled.values, dfout_scaled.values, test_size=0.15, random_state=8, shuffle=True)
+        res = regNN(data_next, EPOCHS)
+    else: 
+        data_next = train_test_split(dfin_scaled.values, dfout_class.values, test_size=0.15, random_state=8, shuffle=True) #### ClassNN <- used dfin rather than dfin_scaled?
+        res = classNN(data_next, EPOCHS)
+    return res
+
 def main(args):
 
     prod_list = [p for p in data[None]['P'][None] if p in scheduling_data[None]['states'][None]]
@@ -83,15 +315,15 @@ def main(args):
     lb = np.min(dfin.values, axis=0)
     ub = np.max(dfin.values, axis=0)
     input_bounds = [(l, u) for l, u in zip(lb, ub)]
-    print(input_bounds)
+    # print(input_bounds)
 
     #Scaling
     x_offset, x_factor = dfin.mean().to_dict(), dfin.std().to_dict()
     y_offset, y_factor = dfout.mean().to_dict(), dfout.std().to_dict()
     # y_off_class, y_fac_class = dfout_class.mean().to_dict(), dfout_class.std().to_dict()
 
-    dfin = (dfin - dfin.mean()).divide(dfin.std())
-    dfout = (dfout - dfout.mean()).divide(dfout.std())
+    dfin_scaled = (dfin - dfin.mean()).divide(dfin.std())
+    dfout_scaled = (dfout - dfout.mean()).divide(dfout.std())
     # dfout_class = (dfout_class - dfout_class.mean()).divide(dfout_class.std())
 
     #Save the scaling parameters of the inputs for OMLT
@@ -103,200 +335,41 @@ def main(args):
 
     model_type = args.model
     EPOCHS = args.epochs
+    SAVE = args.save
+    data_model = dfin, dfout, dfin_scaled, dfout_scaled, dfout_class
 
-    if model_type == "ClassNN" or model_type == "all":
-        #Split DataSet 
-        X_train, X_test, y_train, y_test = train_test_split(dfin.values, dfout_class.values, test_size=0.15, random_state=8)
+    wrapper = partial(run_model, data_model, EPOCHS, y_offset, y_factor)
 
-        model = Net2(50,20)
-        criterion = nn.BCEWithLogitsLoss(reduction='sum')
+    if model_type != 'all':
+        t0 = time.perf_counter()
+        res = wrapper(model_type)
+        t = time.perf_counter()
+        print(f"{model_type}: {res} in {t-t0:.3f} seconds")
 
-        # optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+        if SAVE:
+            dir = f"./results/Models/scheduling_{model_type}.onnx"
+            save_model(res[1], scaled_input_bounds, dir, model_type)
 
-        dataset = TensorDataset(torch.as_tensor(X_train, dtype=torch.float32), torch.as_tensor(y_train, dtype=torch.float32))
-        dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+    else:
+        t0 = time.perf_counter()
+        pool = mp.Pool(4)
+        models = ['RegTree', 'ClassTree', 'RegNN', 'ClassNN']
+        res = pool.map(wrapper, models)
+        t = time.perf_counter()
+        print(res)
+        print(f"in {(t-t0)/60:.3f} min")
 
-        training_loss = np.zeros(EPOCHS)
-        training_ac = np.zeros(EPOCHS)
-        test_ac = np.zeros(EPOCHS)
-        test_loss = np.zeros(EPOCHS)
-
-        for epoch in range(EPOCHS):
-            count = 0
-            for id_batch, (x_batch, y_batch) in enumerate(dataloader):
-                y_batch_pred = model(x_batch)
-                loss = criterion(y_batch_pred, y_batch.view(*y_batch_pred.shape))
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                pred = np.round(torch.sigmoid(y_batch_pred).detach().numpy())
-                target = np.round(y_batch.detach().numpy())
-                training_ac[epoch] += np.sum(pred==target)
-
-                training_loss[epoch] += loss.item()
-
-            training_loss[epoch] = training_loss[epoch]/len(y_train)
-            training_ac[epoch] = training_ac[epoch]/len(y_train)
-
-            y_test_pred = model(torch.as_tensor(X_test, dtype=torch.float32))
-
-            test_loss[epoch] += criterion(y_test_pred, torch.as_tensor(y_test, dtype=torch.float32).view(*y_test_pred.shape)).item()/len(y_test)
-            pred = np.round(torch.sigmoid(y_test_pred).detach().numpy())
-            target = np.round(y_test)
-            test_ac[epoch] += np.sum(pred==target)/len(y_test)
-
-            if epoch % 50 == 0:
-                print(f"Epoch {epoch} accuracy : Training: {training_ac[epoch]}, Test: {test_ac[epoch]}")
-                print(f"Epoch {epoch} loss : Training: {training_loss[epoch]}, Test: {test_loss[epoch]}")
-
-        y_test_pred = model(torch.as_tensor(X_test, dtype=torch.float32))
-        y_train_pred = model(torch.as_tensor(X_train, dtype=torch.float32))
-        test_accuracy = np.sum(np.round(torch.sigmoid(y_test_pred).detach().numpy())==np.round(y_test))/len(y_test)
-        train_accuracy = np.sum(np.round(torch.sigmoid(y_train_pred).detach().numpy())==np.round(y_train))/len(y_train)
-        print(f"Training accuracy: {train_accuracy}, Test accuracy: {test_accuracy}")
-
-
-    if model_type == "RegNN" or model_type == "all":
-
-        X, Y = dfin.values, dfout.values
-
-        # model = Net(5, 5)
-        model = Net(50, 20)
-        loss_function = nn.MSELoss(reduction='sum')
-        optimizer = torch.optim.Adam(model.parameters(),lr=0.005)
-        # optimizer = torch.optim.Adam(model.parameters(),lr=0.01)
-
-        #Split DataSet 
-        X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.15, random_state=8, shuffle=True)
-
-        dataset = TensorDataset(torch.as_tensor(X_train, dtype=torch.float32), torch.as_tensor(y_train, dtype=torch.float32))
-        # test_dataset = TensorDataset(torch.as_tensort(X_test, dtype=torch.float32), torch.as_tensor(y_test, dtype=torch.float32))
-
-
-        dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
-
-        training_loss = np.zeros(EPOCHS)
-        test_loss = np.zeros(EPOCHS)
-
-        for epoch in range(EPOCHS):
-            count = 0
-            for id_batch, (x_batch, y_batch) in enumerate(dataloader):
-                y_batch_pred = model(x_batch)
-                loss = loss_function(y_batch_pred, y_batch.view(*y_batch_pred.shape))
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                training_loss[epoch] += loss.item()
-
-            training_loss[epoch] = training_loss[epoch]/len(y_train)
-
-            y_test_pred = model(torch.as_tensor(X_test, dtype=torch.float32))
-            test_loss[epoch] += loss_function(y_test_pred, torch.as_tensor(y_test, dtype=torch.float32).view(*y_test_pred.shape)).item()/len(y_test)
-
-            if epoch % 50 == 0:
-                print(f"Epoch {epoch} loss : Training: {training_loss[epoch]}, Test: {test_loss[epoch]}")
-
-        # #Evaluating in the test Set
-
-        X_in = torch.as_tensor(X_test, dtype=torch.float32)
-        X_train_in = torch.as_tensor(X_train, dtype=torch.float32)
-        y_pred_test = model.forward(X_in) 
-        y_pred_train = model.forward(X_train_in)
-
-    # plt.scatter(y_test, y_pred_test.detach().numpy(), c='r')
-    # plt.scatter(y_train, y_pred_train.detach().numpy(), c='k')
-    # plt.show()
-
-        mse_relu_train = mean_squared_error(y_train, y_pred_train.detach().numpy())       
-        print('mse relu in the training set %.6f' %mse_relu_train)
-        mse_relu_test = mean_squared_error(y_test, y_pred_test.detach().numpy())       
-        print('mse relu in the test set %.6f' %mse_relu_test)
-
-    # plt.plot(range(EPOCHS), training_loss, '--k', ms = 3)
-    # plt.plot(range(EPOCHS), moving_average(training_loss), '-k')
-    # plt.plot(range(EPOCHS), moving_average(test_loss), '-r')
-    # plt.plot(range(EPOCHS), test_loss, '--r', ms = 3)
-    # plt.yscale('log')
-    # plt.show()
-
-    if model_type == "RegTree" or model_type == "all":
-
-        X, Y = dfin.values, dfout.values
-        X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.15, random_state=8, shuffle=True)
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            PARAMS = {
-                'objective': 'regression',
-                'metric': 'mse',
-                'boosting': 'gbdt',
-                'num_trees': 50,
-                'max_depth': 3,
-                'min_data_in_leaf': 2,
-                'random_state': 100,
-                'verbose': -1
-                }
-            train_data = lgb.Dataset(X_train, 
-                                     label=y_train,
-                                     params={'verbose': -1})
-
-            model = lgb.train(PARAMS, 
-                              train_data,
-                              verbose_eval=False)
-
-        y_pred_train = model.predict(X_train)
-        y_pred_test = model.predict(X_test)
-        mse_train = mean_squared_error(y_train, y_pred_train)
-        mse_test = mean_squared_error(y_test, y_pred_test)
-        print(f"LGB regression MSE: Training: {mse_train}, Testing: {mse_test}")
-
-        # plt.scatter(y_test, y_pred_test, c='r')
-        # plt.scatter(y_train, y_pred_train, c='k')
-        # plt.show()
-
-    if model_type == "ClassTree" or model_type == "all":
-
-        X, Y_cl = dfin.values, dfout_class.values
-        X_train, X_test, y_train_cl, y_test_cl = train_test_split(X, Y_cl, test_size=0.15, random_state=8, shuffle=True)
-
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            PARAMS = {
-                'objective': 'binary',
-                'metric': 'binary_logloss',
-            'boosting': 'gbdt',
-            'num_trees': 50,
-            'max_depth': 3,
-            'min_data_in_leaf': 2,
-            'random_state': 100,
-            'verbose': -1
-            }
-            
-            train_data = lgb.Dataset(X_train, 
-                                 label=y_train_cl,
-                                 params={'verbose': -1})
-
-            model = lgb.train(PARAMS, 
-                          train_data,
-                          verbose_eval=False)
-
-        y_pred_train_cl = model.predict(X_train)
-        y_pred_test_cl = model.predict(X_test)
-        y_pred_test_cl1 =  np.round(y_pred_test_cl)
-        ac_train = accuracy_score(y_train_cl, np.round(y_pred_train_cl))
-        ac_test = accuracy_score(y_test_cl, np.round(y_pred_test_cl))
-        print(f"LGB classification accuracy: Training: {ac_train}, Testing: {ac_test}")
-
+        if SAVE:
+            for i, m in enumerate(models):
+                dir = f"./results/Models/scheduling_{m}.onnx"
+                save_model(res[i][1], scaled_input_bounds, dir, m)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run training")
 
     parser.add_argument("--model", type=str, default="all", help = "Model to be trained - 'all', 'RegNN', 'ClassNN', 'RegTree', 'ClassTree'")
     parser.add_argument("--epochs", type=int, default=1000, help="Number of training epochs")
+    parser.add_argument("--save", type=bool, default=False, help="Flag indicating if model(s) should get saved")
 
     args = parser.parse_args()
     main(args)

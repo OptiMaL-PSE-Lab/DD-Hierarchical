@@ -121,15 +121,16 @@ def sampling(N_grid, material):
 # results, m, data = batch_reactor(3)   
 #  
 
-N_samples = 10 # 120
-# for m in materials:
-for m in materials:
-    dataframe, full_data = sampling(N_samples, m)
-    #Saving Dataframe
-    df = pd.DataFrame.from_dict(dataframe)
-    try:
-        dir = './data/CS2_sampling/Batch_Reactor_NN_'+m
-        df.to_csv(dir) 
-    except:
-        dir = '../data/CS2_sampling/Batch_Reactor_NN_'+m
-        df.to_csv(dir) 
+if __name__=='__main__':
+    N_samples = 10 # 120
+    # for m in materials:
+    for m in materials:
+        dataframe, full_data = sampling(N_samples, m)
+        #Saving Dataframe
+        df = pd.DataFrame.from_dict(dataframe)
+        try:
+            dir = './data/CS2_sampling/Batch_Reactor_NN_'+m
+            df.to_csv(dir) 
+        except:
+            dir = '../data/CS2_sampling/Batch_Reactor_NN_'+m
+            df.to_csv(dir) 

@@ -5,6 +5,14 @@ import matplotlib.pyplot as plt
 from hierarchy.planning.Planning_Extended_dyn import simulate, state_to_control_t
 from data.planning.planning_sch_bilevel_lowdim import scheduling_data, data
 
+plt.rcParams["font.family"] = "Times New Roman"
+ft = int(15)
+font = {'size': ft}
+plt.rc('font', **font)
+params = {'legend.fontsize': 12.5,
+              'legend.handlelength': 2}
+plt.rcParams.update(params)
+
 def average_from_list(array_total):
     f_median = np.median(array_total, axis = 0)
     f_min = np.min(array_total, axis = 0)
@@ -89,232 +97,269 @@ def plots(input_data, Production, TP, Sales, planning=True, scheduling=False, co
         Sales_min[element] = min
         Sales_max[element] = max
 
-    P_PA     = Production['PA'] 
+    P_PA    = Production['PA'] 
     P_PC    = Production['PC'] 
     P_TEE   = Production['TEE']
     P_PB    = Production['PB'] 
     P_PD    = Production['PD'] 
     P_TGE   = Production['TGE']
     PAI     = Production['AI'] 
-    PI  = Production['I']    
+    PI      = Production['I']    
     TP_As   = TP['Asia']       
     TP_Am   = TP['America']    
 
-    fig, axs = plt.subplots(4, 2, figsize=(60, 30))
+    fig, axs = plt.subplots(5, 2, figsize=(20, 12))
 
-    axs[0,0].step(np.arange(N_t)+1, PI, label='P_I', where = 'post')
-    axs[0,0].step(np.arange(N_t)+1, PAI, label='P_AI', where = 'post')
-    axs[0,0].step(np.arange(N_Tc)+1, TP_Am, label='F_Am', where = 'post')
-    axs[0,0].step(np.arange(N_Tc)+1, TP_As, label='F_As', where = 'post')
-    # axs[0,0].legend()
+    axs[0,0].step(np.arange(N_t)+1, PI, label='I Production', where = 'post', c='darkblue')
+    axs[0,0].step(np.arange(N_t)+1, PAI, label='AI Production', where = 'post', c='darkorange')
+    axs[0,0].step(np.arange(N_Tc)+1, TP_Am, label='America transport', where = 'post', c='green')
+    axs[0,0].step(np.arange(N_Tc)+1, TP_As, label='Asia transport', where = 'post', c='brown')
     axs[0,0].set_ylabel('AI production in Europe')
     axs[0,0].set_xlabel('Time in weeks')
+    axs[0,0].legend(ncol=2)
 
-    axs[1,0].step(np.arange(N_t)+1, P_PB, c = 'blue', label='P_PB', where = 'post')
-    axs[1,0].step(np.arange(N_t)+1, P_PD, c='orange', label='P_PD', where = 'post')
-    axs[1,0].step(
-        np.arange(N_t)+1, Sales_median['PB'], 
+    axs[2,0].step(np.arange(N_t)+1, P_PC, c = 'blue', label='PC production', where = 'post')
+    axs[2,0].step(np.arange(N_t)+1, P_PD, c='orange', label='PD production', where = 'post')
+    axs[2,0].step(
+        np.arange(N_t)+1, Sales_median['PC'], 
         where = 'post', c='cyan', linestyle='--'
         ) 
-    axs[1,0].fill_between(
-        np.arange(N_t)+1, Sales_min['PB'], Sales_max['PB'], 
-        label='S_PB', alpha = .5, step = 'post', color='cyan',
+    axs[2,0].fill_between(
+        np.arange(N_t)+1, Sales_min['PC'], Sales_max['PC'], 
+        label='PC sales', alpha = .5, step = 'post', color='cyan',
         )
-    axs[1,0].step(
+    axs[2,0].step(
         np.arange(N_t)+1, Sales_median['PD'], 
-        where = 'post', c='green', linestyle='--'
+        where = 'post', c='orangered', linestyle='--'
         ) 
-    axs[1,0].fill_between(
+    axs[2,0].fill_between(
         np.arange(N_t)+1, Sales_min['PD'], Sales_max['PD'], 
-        label='S_PD', alpha = .5, step = 'post', color='green',
+        label='PD sales', alpha = .5, step = 'post', color='orangered',
         )
-    axs[1,0].step(
-        np.arange(N_t)+1, Demand_median['PB'], 
+    axs[2,0].step(
+        np.arange(N_t)+1, Demand_median['PC'], 
         where = 'post', c='darkblue', linestyle='--'
         ) 
-    axs[1,0].fill_between(
-        np.arange(N_t)+1, Demand_min['PB'], Demand_max['PB'], 
-        label='D_PB', alpha = .5, step = 'post', color='darkblue'
+    axs[2,0].fill_between(
+        np.arange(N_t)+1, Demand_min['PC'], Demand_max['PC'], 
+        label='PC demand', alpha = .5, step = 'post', color='darkblue'
         )
-    axs[1,0].step(
+    axs[2,0].step(
         np.arange(N_t)+1, Demand_median['PD'], 
         where = 'post', c='darkorange', linestyle='--'
         ) 
-    axs[1,0].fill_between(
+    axs[2,0].fill_between(
         np.arange(N_t)+1, Demand_min['PD'], Demand_max['PD'], 
-        label='D_PD', alpha = .5, step = 'post', color='darkorange'
+        label='PD demand', alpha = .5, step = 'post', color='darkorange'
         )
-    # axs[0,1].legend()
-    axs[1,0].set_ylabel('PB and PD production')
-    axs[1,0].set_xlabel('Time in weeks')
-
-    # IIstar = input_data[None]['IIstar0'][None]
-    # IAIPstar = input_data[None]['IAIPstar0'][None]
-    # axs[1,0].step(
-    #     np.arange(N_t)+1, Storage_median['I'], 
-    #     where = 'post', c='darkblue', linestyle='--'
-    #     ) 
-    # axs[1,0].fill_between(
-    #     np.arange(N_t)+1, Storage_min['I'], Storage_max['I'], 
-    #     label='I storage', alpha = .5, step = 'post'
-    #     )
-    # axs[1,0].plot([1, N_t], [IIstar, IIstar], c = 'darkblue', linestyle='--', label = 'Safe S_I')
-    # axs[1,0].step(
-    #     np.arange(N_t)+1, Storage_median['AIP'], 
-    #     where = 'post', c='darkorange', linestyle='--'
-    #     ) 
-    # axs[1,0].fill_between(
-    #     np.arange(N_t)+1, Storage_min['AIP'], Storage_max['AIP'], 
-    #     label='AI storage', alpha = .5, step = 'post'
-    #     )
-    # axs[1,0].plot([1, N_t], [IAIPstar, IAIPstar], c = 'darkorange', linestyle='--', label = 'Safe S_AI_Eu')
-    # # axs[1,0].legend()
-    # axs[1,0].set_ylabel('Storage in Europe')
-    # axs[1,0].set_xlabel('Time in weeks')
-
-    # IAISstar_As = input_data[None]['IAISstar0']['Asia']
-    # IAISstar_Am = input_data[None]['IAISstar0']['America']
-    # axs[2,0].step(
-    #     np.arange(N_t)+1, Storage_median['AIS_As'], 
-    #     where = 'post', c='darkblue', linestyle='--'
-    #     ) 
-    # axs[2,0].fill_between(
-    #     np.arange(N_t)+1, Storage_min['AIS_As'], Storage_max['AIS_As'], 
-    #     label='S_AI_As', alpha = .5, step = 'post'
-    #     )
-    # axs[2,0].plot([1, N_t], [IAISstar_As, IAISstar_As], c='darkblue', linestyle='--', label = 'Safe S_AI_As')
-    # axs[2,0].step(
-    #     np.arange(N_t)+1, Storage_median['AIS_Am'], 
-    #     where = 'post', c='darkorange', linestyle='--'
-    #     ) 
-    # axs[2,0].fill_between(
-    #     np.arange(N_t)+1, Storage_min['AIS_Am'], Storage_max['AIS_Am'], 
-    #     label='S_AI_Am', alpha = .5, step = 'post'
-    #     )
-    # axs[2,0].plot([1, N_t], [IAISstar_Am, IAISstar_Am], c='darkorange', linestyle='--', label = 'Safe S_AI_Am')
-    # # axs[2,0].legend()
-    # axs[2,0].set_ylabel('AI storage')
-    # axs[2,0].set_xlabel('Time in weeks')
-
-    axs[2,0].step(
-        np.arange(N_t)+1, Demand_median['TGE'], 
-        where = 'post', c='darkblue', linestyle='--'
-        ) 
-    axs[2,0].fill_between(
-        np.arange(N_t)+1, Demand_min['TGE'], Demand_max['TGE'], 
-        label='D_TEE', alpha = .5, step = 'post', color = 'blue',
-        )
-    axs[2,0].step(np.arange(N_t)+1, P_TGE, label='P_TGE', where = 'post')
-    axs[2,0].step(
-        np.arange(N_t)+1, Sales_median['TGE'], 
-        where = 'post', c='cyan', linestyle='--'
-        ) 
-    axs[2,0].fill_between(
-        np.arange(N_t)+1, Sales_min['TGE'], Sales_max['TGE'], 
-        label='SA_TGE', alpha = .5, step = 'post', color='cyan',
-        )
-    axs[2,0].set_ylabel('TGE production')
+    axs[2,0].set_ylabel('PC and PD production')
     axs[2,0].set_xlabel('Time in weeks')
+    axs[2,0].legend(ncol=3)
 
-    axs[0,1].step(np.arange(N_t)+1, P_PA, c = 'blue', label='P_PA', where = 'post')
-    axs[0,1].step(np.arange(N_t)+1, P_PC, c='orange', label='P_PC', where = 'post')
+    IIstar = input_data[None]['IIstar0'][None]
+    IAIPstar = input_data[None]['IAIPstar0'][None]
     axs[0,1].step(
-        np.arange(N_t)+1, Sales_median['PA'], 
-        where = 'post', c='cyan', linestyle='--'
-        ) 
-    axs[0,1].fill_between(
-        np.arange(N_t)+1, Sales_min['PA'], Sales_max['PA'], 
-        label='S_PA', alpha = .5, step = 'post', color='cyan',
-        )
-    axs[0,1].step(
-        np.arange(N_t)+1, Sales_median['PC'], 
-        where = 'post', c='green', linestyle='--'
-        ) 
-    axs[0,1].fill_between(
-        np.arange(N_t)+1, Sales_min['PC'], Sales_max['PC'], 
-        label='S_PC', alpha = .5, step = 'post', color='green',
-        )
-    axs[0,1].step(
-        np.arange(N_t)+1, Demand_median['PA'], 
+        np.arange(N_t)+1, Storage_median['I'], 
         where = 'post', c='darkblue', linestyle='--'
         ) 
     axs[0,1].fill_between(
-        np.arange(N_t)+1, Demand_min['PA'], Demand_max['PA'], 
-        label='D_PA', alpha = .5, step = 'post', color='darkblue'
+        np.arange(N_t)+1, Storage_min['I'], Storage_max['I'], 
+        label='I storage', alpha = .5, step = 'post', color='blue',
         )
+    axs[0,1].plot([1, N_t], [IIstar, IIstar], c = 'darkblue', linestyle='--', label = 'Safe I storage')
     axs[0,1].step(
-        np.arange(N_t)+1, Demand_median['PC'], 
+        np.arange(N_t)+1, Storage_median['AIP'], 
         where = 'post', c='darkorange', linestyle='--'
         ) 
     axs[0,1].fill_between(
-        np.arange(N_t)+1, Demand_min['PC'], Demand_max['PC'], 
-        label='D_PC', alpha = .5, step = 'post', color='darkorange'
+        np.arange(N_t)+1, Storage_min['AIP'], Storage_max['AIP'], 
+        label='AI storage', alpha = .5, step = 'post', color='orange',
         )
-    # axs[0,1].legend()
-    axs[0,1].set_ylabel('PA and PC production')
+    axs[0,1].plot([1, N_t], [IAIPstar, IAIPstar], c = 'darkorange', linestyle='--', label = 'Safe AI storage')
+
+    IAISstar_As = input_data[None]['IAISstar0']['Asia']
+    IAISstar_Am = input_data[None]['IAISstar0']['America']
+    axs[0,1].step(
+        np.arange(N_t)+1, Storage_median['AIS_As'], 
+        where = 'post', c='darkgreen', linestyle='-'
+        ) 
+    axs[0,1].fill_between(
+        np.arange(N_t)+1, Storage_min['AIS_As'], Storage_max['AIS_As'], 
+        label='Asia storage', alpha = .5, step = 'post', color='green',
+        )
+    axs[0,1].plot([1, N_t], [IAISstar_As, IAISstar_As], c='darkgreen', linestyle='--', label = 'Asia safe storage')
+    axs[0,1].step(
+        np.arange(N_t)+1, Storage_median['AIS_Am'], 
+        where = 'post', c='brown', linestyle='-'
+        ) 
+    axs[0,1].fill_between(
+        np.arange(N_t)+1, Storage_min['AIS_Am'], Storage_max['AIS_Am'], 
+        label='America storage', alpha = .5, step = 'post',color='brown'
+        )
+    axs[0,1].plot([1, N_t], [IAISstar_Am, IAISstar_Am], c='brown', linestyle='--', label = 'America safe storage')
+    # axs[2,0].legend()
+    axs[0,1].set_ylabel('Secondary AI storage')
     axs[0,1].set_xlabel('Time in weeks')
+    axs[0,1].legend(ncol=4)
 
     axs[3,0].step(
-        np.arange(N_t)+1, Demand_median['TEE'], 
+        np.arange(N_t)+1, Demand_median['TGE'], 
         where = 'post', c='darkblue', linestyle='--'
         ) 
     axs[3,0].fill_between(
-        np.arange(N_t)+1, Demand_min['TEE'], Demand_max['TEE'], 
-        label='D_TEE', alpha = .5, step = 'post', color = 'blue',
+        np.arange(N_t)+1, Demand_min['TGE'], Demand_max['TGE'], 
+        label='Demand', alpha = .5, step = 'post', color = 'blue',
         )
-    axs[3,0].step(np.arange(N_t)+1, P_TEE, label='P_TEE', where = 'post')
+    axs[3,0].step(np.arange(N_t)+1, P_TGE, label='Production', where = 'post', color='black')
     axs[3,0].step(
-        np.arange(N_t)+1, Sales_median['TEE'], 
+        np.arange(N_t)+1, Sales_median['TGE'], 
         where = 'post', c='cyan', linestyle='--'
         ) 
     axs[3,0].fill_between(
-        np.arange(N_t)+1, Sales_min['TEE'], Sales_max['TEE'], 
-        label='SA_TEE', alpha = .5, step = 'post', color='cyan',
+        np.arange(N_t)+1, Sales_min['TGE'], Sales_max['TGE'], 
+        label='Sales', alpha = .5, step = 'post', color='cyan',
         )
-    axs[3,0].set_ylabel('TEE production')
+    axs[3,0].set_ylabel('TGE production')
     axs[3,0].set_xlabel('Time in weeks')
-    # axs[3,0].legend()
+    axs[3,0].legend(loc='lower center', ncol=3)
 
-    # IPAstar = input_data[None]['Istar0']['PA']
-    # ITEEstar = input_data[None]['Istar0']['TEE']
-    # axs[1,1].step(
-    #     np.arange(N_t)+1, Storage_median['TEE'], 
-    #     where = 'post', c='darkblue', linestyle='--'
-    #     ) 
-    # axs[1,1].fill_between(
-    #     np.arange(N_t)+1, Storage_min['TEE'], Storage_max['TEE'], 
-    #     label='S_TEE', alpha = .5, step = 'post'
-    #     )
-    # axs[1,1].plot([1, N_t], [ITEEstar, ITEEstar], label = 'Safe S_TEE')
-    # # axs[1,1].legend()
-    # axs[1,1].set_ylabel('Storage of TEE')
-    # axs[1,1].set_xlabel('Time in weeks')
+    axs[1,0].step(np.arange(N_t)+1, P_PA, c = 'blue', label='PA production', where = 'post')
+    axs[1,0].step(np.arange(N_t)+1, P_PB, c='orange', label='PB production', where = 'post')
+    axs[1,0].step(
+        np.arange(N_t)+1, Sales_median['PA'], 
+        where = 'post', c='cyan', linestyle='--'
+        ) 
+    axs[1,0].fill_between(
+        np.arange(N_t)+1, Sales_min['PA'], Sales_max['PA'], 
+        label='PA sales', alpha = .5, step = 'post', color='cyan',
+        )
+    axs[1,0].step(
+        np.arange(N_t)+1, Sales_median['PB'], 
+        where = 'post', c='orangered', linestyle='--'
+        ) 
+    axs[1,0].fill_between(
+        np.arange(N_t)+1, Sales_min['PB'], Sales_max['PB'], 
+        label='PB sales', alpha = .5, step = 'post', color='orangered',
+        )
+    axs[1,0].step(
+        np.arange(N_t)+1, Demand_median['PA'], 
+        where = 'post', c='darkblue', linestyle='--'
+        ) 
+    axs[1,0].fill_between(
+        np.arange(N_t)+1, Demand_min['PA'], Demand_max['PA'], 
+        label='PA demand', alpha = .5, step = 'post', color='darkblue'
+        )
+    axs[1,0].step(
+        np.arange(N_t)+1, Demand_median['PB'], 
+        where = 'post', c='darkorange', linestyle='--'
+        ) 
+    axs[1,0].fill_between(
+        np.arange(N_t)+1, Demand_min['PB'], Demand_max['PB'], 
+        label='PB demand', alpha = .5, step = 'post', color='darkorange'
+        )
+    axs[1,0].set_ylabel('PA and PB production')
+    axs[1,0].set_xlabel('Time in weeks')
+    axs[1,0].legend(ncol=3)
 
-    # IPCstar = input_data[None]['Istar0']['PC']
-    # IPAstar = input_data[None]['Istar0']['PA']
-    # axs[2,1].step(
-    #     np.arange(N_t)+1, Storage_median['PC'], 
-    #     where = 'post', c='darkblue', linestyle='--'
-    #     ) 
-    # axs[2,1].fill_between(
-    #     np.arange(N_t)+1, Storage_min['PC'], Storage_max['PC'], 
-    #     label='S_PC', alpha = .5, step = 'post'
-    #     )
-    # axs[2,1].plot([1, N_t], [IPCstar, IPCstar], c='darkblue', label = 'Safe S_PC')
-    # axs[2,1].step(
-    #     np.arange(N_t)+1, Storage_median['PA'], 
-    #     where = 'post', c='darkorange', linestyle='--'
-    #     ) 
-    # axs[2,1].fill_between(
-    #     np.arange(N_t)+1, Storage_min['PA'], Storage_max['PA'], 
-    #     label='S_PA', alpha = .5, step = 'post'
-    #     )
-    # axs[2,1].plot([1, N_t], [IPAstar, IPAstar], c='darkorange', label = 'Safe S_PA')
-    # # axs[2,1].legend()
-    # axs[2,1].set_ylabel('PA and PC storage')
-    # axs[2,1].set_xlabel('Time in weeks')
+    axs[4,0].step(
+        np.arange(N_t)+1, Demand_median['TEE'], 
+        where = 'post', c='darkblue', linestyle='--'
+        ) 
+    axs[4,0].fill_between(
+        np.arange(N_t)+1, Demand_min['TEE'], Demand_max['TEE'], 
+        label='Demand', alpha = .5, step = 'post', color = 'blue',
+        )
+    axs[4,0].step(np.arange(N_t)+1, P_TEE, label='Production', where = 'post', color='black')
+    axs[4,0].step(
+        np.arange(N_t)+1, Sales_median['TEE'], 
+        where = 'post', c='cyan', linestyle='--'
+        ) 
+    axs[4,0].fill_between(
+        np.arange(N_t)+1, Sales_min['TEE'], Sales_max['TEE'], 
+        label='Sales', alpha = .5, step = 'post', color='cyan',
+        )
+    axs[4,0].set_ylabel('TEE production')
+    axs[4,0].set_xlabel('Time in weeks')
+    axs[4,0].legend(loc='lower center', ncol=3)
 
-    plt.show()
+    IPAstar = input_data[None]['Istar0']['PA']
+    ITEEstar = input_data[None]['Istar0']['TEE']
+    axs[4,1].step(
+        np.arange(N_t)+1, Storage_median['TEE'], 
+        where = 'post', c='darkblue', linestyle='--'
+        ) 
+    axs[4,1].fill_between(
+        np.arange(N_t)+1, Storage_min['TEE'], Storage_max['TEE'], 
+        label='Storage', alpha = .5, step = 'post'
+        )
+    axs[4,1].plot([1, N_t], [ITEEstar, ITEEstar], label = 'Safe Storage')
+    axs[4,1].legend()
+    axs[4,1].set_ylabel('Storage of TEE')
+    axs[4,1].set_xlabel('Time in weeks')
+
+    ITGEstar = input_data[None]['Istar0']['TGE']
+    axs[3,1].step(
+        np.arange(N_t)+1, Storage_median['TGE'], 
+        where = 'post', c='darkblue', linestyle='--'
+        ) 
+    axs[3,1].fill_between(
+        np.arange(N_t)+1, Storage_min['TGE'], Storage_max['TGE'], 
+        label='Storage', alpha = .5, step = 'post'
+        )
+    axs[3,1].plot([1, N_t], [ITGEstar, ITGEstar], label = 'Safe Storage')
+    axs[3,1].legend()
+    axs[3,1].set_ylabel('Storage of TGE')
+    axs[3,1].set_xlabel('Time in weeks')
+
+
+    IPBstar = input_data[None]['Istar0']['PB']
+    IPAstar = input_data[None]['Istar0']['PA']
+    axs[1,1].step(
+        np.arange(N_t)+1, Storage_median['PA'], 
+        where = 'post', c='darkblue', linestyle='--'
+        ) 
+    axs[1,1].fill_between(
+        np.arange(N_t)+1, Storage_min['PA'], Storage_max['PA'], 
+        label='PA storage', alpha = .5, step = 'post'
+        )
+    axs[1,1].plot([1, N_t], [IPAstar, IPAstar], c='darkblue', label = 'PA safe storage')
+    axs[1,1].step(
+        np.arange(N_t)+1, Storage_median['PB'], 
+        where = 'post', c='darkorange', linestyle='--'
+        ) 
+    axs[1,1].fill_between(
+        np.arange(N_t)+1, Storage_min['PB'], Storage_max['PB'], 
+        label='PB storage', alpha = .5, step = 'post'
+        )
+    axs[1,1].plot([1, N_t], [IPAstar, IPAstar], c='darkorange', label = 'PB safe storage')
+    # axs[2,1].legend()
+    axs[1,1].set_ylabel('PA and PB storage')
+    axs[1,1].set_xlabel('Time in weeks')
+    axs[1,1].legend(ncol=4)
+
+    IPCstar = input_data[None]['Istar0']['PC']
+    IPDstar = input_data[None]['Istar0']['PD']
+    axs[2,1].step(
+        np.arange(N_t)+1, Storage_median['PC'], 
+        where = 'post', c='darkblue', linestyle='--'
+        ) 
+    axs[2,1].fill_between(
+        np.arange(N_t)+1, Storage_min['PC'], Storage_max['PC'], 
+        label='PC storage', alpha = .5, step = 'post'
+        )
+    axs[2,1].plot([1, N_t], [IPCstar, IPCstar], c='darkblue', label = 'PC safe storage')
+    axs[2,1].step(
+        np.arange(N_t)+1, Storage_median['PD'], 
+        where = 'post', c='darkorange', linestyle='--'
+        ) 
+    axs[2,1].fill_between(
+        np.arange(N_t)+1, Storage_min['PD'], Storage_max['PD'], 
+        label='PD storage', alpha = .5, step = 'post'
+        )
+    axs[2,1].plot([1, N_t], [IPDstar, IPDstar], c='darkorange', label = 'PD safe storage')
+    axs[2,1].legend(ncol=4)
+    axs[2,1].set_ylabel('PC and PD storage')
+    axs[2,1].set_xlabel('Time in weeks')
 
     return fig, axs
 
@@ -365,22 +410,41 @@ def get_plots(x, input_data, planning=True, scheduling=False, control=False):
 
     return plots(input_data, Production, TP, Sales, planning=planning, scheduling=scheduling, control=control)
 
-Nt = 5
+def plot_traj(method, Nt, type='DFO',SAVE=False):
 
-data_copy = data.copy()
-data_copy[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
+    data_copy = data.copy()
+    data_copy[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
 
-with open('./results/optima/tri_Py-BOBYQA.json') as f:
-    bi_opt = json.load(f)
+    with open('./results/Optima/'+method+'.json') as f:
+        opt = json.load(f)
 
-# fig, axs = get_plots(bi_opt['x'], data_copy)
-# fig.show()
+    fig, axs = get_plots(opt['x'], data_copy)
 
-with open('./results/optima/centralized.json') as f:
-    opt = json.load(f)
+    if 'real' in opt:
+        real_obj = opt['real']['obj']
+    else:
+        real_obj = np.nan
+    if type=='DFO':
+        axs[0,0].set_title(f"Objectives: upper: {opt['upper']['obj']:.3f}, bi: {opt['bi']['obj']:.3f}, tri: {opt['tri']['obj']:.3f}, real: {real_obj:.3f}")
+        axs[0,1].set_title(f"Derivative-free optimisation time: {opt['time']:.3f} min")
+    elif type=='surrogate':
+        if 'large' in opt:
+            dummy = opt['large']
+            time = opt['opt_time_l']
+        elif 'medium' in opt:
+            dummy = opt['medium']
+            time = opt['opt_time_m']
+        elif 'small' in opt:
+            dummy = opt['small']
+            time = opt['opt_time_s']
+        else:
+            dummy = opt['hierarchy']
+            time = opt['opt_time_s']
+        axs[0,1].set_title(f"Surrogate optimisation time: {time/60:.3f} min")
+        axs[0,0].set_title(f"Objectives: upper: {dummy['upper']['obj']:.3f}, bi: {dummy['bi']['obj']:.3f}, tri: {dummy['tri']['obj']:.3f}, real: {real_obj:.3f}")
+    else:
+        raise ValueError("type should be either 'DFO' or 'surrogate'")
 
-# fig, axs = get_plots(opt['x'], data_copy)
-# fig.show()
+    fig.savefig('./results/Figures/'+method+'.svg')
 
-idx = np.where(np.abs(np.array(bi_opt['x']) - np.array(opt['x'])) > 1)
-print(idx)
+

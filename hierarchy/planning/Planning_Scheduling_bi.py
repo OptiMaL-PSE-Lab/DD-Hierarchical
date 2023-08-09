@@ -17,8 +17,8 @@ from functools import partial
 import pyomo.environ as pyo
 from pyomo.opt import SolverStatus, TerminationCondition
 
-from data.planning.planning_sch_bilevel import data as import_data
-from data.planning.planning_sch_bilevel import scheduling_data
+from data.planning.planning_sch_bilevel_lowdim import data as import_data
+from data.planning.planning_sch_bilevel_lowdim import scheduling_data
 
 def state_to_control_t(t, N_t, T_set):
     dummy_array = np.arange(1, 1+N_t)
@@ -379,6 +379,7 @@ def scheduling_Asia(data, tightened=True):
     model.Ts = pyo.Var(model.I, model.N, within=pyo.NonNegativeReals)
     model.Tf = pyo.Var(model.I, model.N, within=pyo.NonNegativeReals)
     model.D = pyo.Var(model.I, model.N, within=pyo.NonNegativeReals)
+    
     model.T_CCH = pyo.Var(model.I, model.N, within=pyo.NonNegativeReals)
     model.Ws = pyo.Var(model.I, model.N, within=pyo.Binary)
     # model.Wp = pyo.Var(model.I, model.N, within=pyo.Binary)
@@ -707,6 +708,13 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
             )
     return Storage, Demand
 
+# plt.rcParams["font.family"] = "Times New Roman"
+# ft = int(13)
+# font = {'size': ft}
+# plt.rc('font', **font)
+# params = {'legend.fontsize': 12.5,
+#               'legend.handlelength': 2}
+# plt.rcParams.update(params)
 
 # Nt=5
 # import_data[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
@@ -790,11 +798,13 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 
 
 # bar_style = {'alpha':1.0, 'lw':25, 'solid_capstyle':'butt'}
-# text_style = {'color':'white', 'weight':'light', 'ha':'center', 'va':'center'}
+# text_style = {'color':'white', 'weight':'bold', 'ha':'center', 'va':'center'}
 # colors = mpl.cm.Dark2.colors
 
 # U1_I_list = ['TI1', 'TEE1', 'TGE1', 'PA1', 'PB1']
 # U2_I_list = ['TI2', 'TEE2', 'TGE2', 'PA2', 'PB2']
+
+# plt.figure(figsize=(7,4))
 
 # for n in res_Sch.N:
 #     t = pyo.value(res_Sch.T[n])
@@ -836,7 +846,7 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 
 # labels = ['Machine 1', 'Machine 2']
 # plt.yticks([0, 1], labels=labels)
-# plt.show()
-# plt.clf()
-# # plt.savefig('test.png')
+# # plt.show()
+# # plt.clf()
+# plt.savefig('results/Figures/x0_scheduling.svg')
 

@@ -51,8 +51,8 @@ for i in range(N_samples):
         storage = pyo.value(res_Sch.st_cost)/20
         feas = 1
     except:
-        changeover = 100/12
-        storage = 10/12
+        changeover = 100/12*1e6
+        storage = 10/12*1e6
         feas = 0
     df['cost'] += [changeover + storage]
     df['feas'] += [feas]

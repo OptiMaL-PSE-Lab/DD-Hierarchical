@@ -25,8 +25,8 @@ from omlt.io import load_onnx_neural_network
 
 from omlt.neuralnet import ReluBigMFormulation
 
-from data.planning.planning_sch_bilevel import data as import_data
-from data.planning.planning_sch_bilevel import scheduling_data
+from data.planning.planning_sch_bilevel_lowdim import data as import_data
+from data.planning.planning_sch_bilevel_lowdim import scheduling_data
 
 def state_to_control_t(t, N_t, T_set):
     dummy_array = np.arange(1, 1+N_t)
@@ -1442,6 +1442,13 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
             )
     return Storage, Demand
 
+# plt.rcParams["font.family"] = "Times New Roman"
+# ft = int(13)
+# font = {'size': ft}
+# plt.rc('font', **font)
+# params = {'legend.fontsize': 12.5,
+#               'legend.handlelength': 2}
+# plt.rcParams.update(params)
 
 # Nt=5
 # import_data[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
@@ -1578,9 +1585,9 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 
 # labels = ['Machine 1', 'Machine 2']
 # plt.yticks([0, 1], labels=labels)
-# plt.show()
-# plt.clf()
-# # plt.savefig('test.png')
+# # plt.show()
+# # plt.clf()
+# plt.savefig('results/Figures/x0_sch_ctrl_all.svg')
 
-# ## 
+# # ## 
 

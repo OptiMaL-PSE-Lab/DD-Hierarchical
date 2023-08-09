@@ -1,1 +1,7 @@
+*.json
+*.db
+*.log
+*.pyc
+*.onnx
+*.cpython-38.pyc
 *.egg-info

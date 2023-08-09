@@ -2,7 +2,7 @@ from time import perf_counter, sleep
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from IPython.display import Image
+# from IPython.display import Image
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 
@@ -29,7 +29,7 @@ class PyTorchModel(nn.Module):
         x = self.out(x)
         return x
 
-mat = 'TI'
+mat = 'PA'
 
 try:
     dir = './data/CS2_sampling/Batch_Reactor_NN_'+mat
@@ -128,8 +128,8 @@ y_pred_train_relu = model.forward(X_train_in)
        
 # mse_sigmoid = mean_squared_error(y_test, y_pred_test_sigmoid)       
 # print('mse sigmoid in the test set %.6f' %mse_sigmoid) 
-# mse_relu = mean_squared_error(y_test, y_pred_test_relu)       
-# print('mse relu in the test set %.6f' %mse_relu)
+mse_relu = mean_squared_error(y_test, y_pred_test_relu.detach().numpy())       
+print('mse relu in the test set %.6f' %mse_relu)
 
 # # summarize history for loss
 # fig,ax= plt.subplots()
@@ -176,22 +176,32 @@ axs = gs.subplots(sharex = True)
 msize = 7.5
 alp = 0.65
 m = 1
-axs[0].plot(X_test,tf_test, label = 'Sampled Test Points', marker = 'x', color = 'r', linewidth = 0, ms = msize ,mew = 2) 
-axs[0].plot(X_test, tf_relu, label = 'ReLU NN', marker = '^',color = 'b', linewidth = 0, alpha = alp, mew = m)
+
+X_all = np.concatenate((X_test, X_train)).squeeze()
+tf_all = np.concatenate((tf_relu, tf_relu_train)).squeeze()
+Q_all = np.concatenate((Q_relu, Q_relu_train)).squeeze()
+idx = np.argsort(X_all)
+# print(X_all, X_all[idx])
+# print(tf_all, tf_all[idx])
+
+axs[0].plot(X_test, tf_test, label = 'Test samples', marker = 'x', color = 'b', linewidth = 0, ms = msize ,mew = 2) 
+axs[0].plot(X_all[idx].squeeze(), tf_all[idx].squeeze(),  label = 'Prediction', color = 'k', linewidth=1)
+# axs[0].plot(X_test, tf_relu, label = 'ReLU NN', marker = '^',color = 'b', linewidth = 0, alpha = alp, mew = m)
 # axs[0].set_ylim(0,dfout.max()['tf'])
 axs[0].grid(alpha =0.3 ,ls ='--')
 axs[0].set_ylabel('Time [h]')
 axs[0].legend()
 
-axs[0].plot(X_train,tf_train, label = 'Sampled Training Points', marker = 'x', color = 'orange', linewidth = 0, ms = msize/2 ,mew = 2/2) 
-axs[0].plot(X_train, tf_relu_train, label = 'ReLU NN', marker = '^',color = 'c', linewidth = 0, alpha = alp, mew = m/2)
+axs[0].plot(X_train, tf_train, label = 'Training samples', marker = '^', color = 'orange', linewidth = 0, ms = msize ,mew = 2) 
+# axs[0].plot(X_train, tf_relu_train, label = 'ReLU NN', marker = '^',color = 'c', linewidth = 0, alpha = alp, mew = m/2)
 # axs[0].set_ylim(0,dfout.max()['tf'])
 axs[0].grid(alpha =0.3 ,ls ='--')
 axs[0].set_ylabel('Time [h]')
 axs[0].legend()
 
-axs[1].plot(X_test,Q_test, label = 'Sampled Points', marker = 'x',color = 'r', linewidth = 0, ms = msize ,mew = 2)
-axs[1].plot(X_test, Q_relu, label = 'ReLU NN', marker = '^',color = 'b', linewidth = 0, alpha = alp, mew = m)
+axs[1].plot(X_test,Q_test, label = 'Test samples', marker = 'x',color = 'b', linewidth = 0, ms = msize ,mew = 2)
+axs[1].plot(X_all[idx].squeeze(), Q_all[idx].squeeze(), label = 'Prediction', color = 'k', linewidth=1)
+# axs[1].plot(X_test, Q_relu, label = 'ReLU NN', marker = '^',color = 'b', linewidth = 0, alpha = alp, mew = m)
 # axs[1].set_xlabel('Concentration $\\rm[m^3]$')
 axs[1].set_xlabel('Production $\\rm[kg]$')
 # axs[1].set_ylim(None, dfout.max()['utility'])
@@ -199,8 +209,8 @@ axs[1].set_ylabel('Utility [uU]')
 axs[1].grid(alpha =0.3 ,ls ='--')
 axs[1].legend()
 
-axs[1].plot(X_train,Q_train, label = 'Sampled Points', marker = 'x',color = 'orange', linewidth = 0, ms = msize/2 ,mew = 2/2)
-axs[1].plot(X_train, Q_relu_train, label = 'ReLU NN', marker = '^',color = 'c', linewidth = 0, alpha = alp, mew = m/2)
+axs[1].plot(X_train,Q_train, label = 'Training samples', marker = '^',color = 'orange', linewidth = 0, ms = msize ,mew = 2)
+# axs[1].plot(X_train, Q_relu_train, label = 'ReLU NN', marker = '^',color = 'c', linewidth = 0, alpha = alp, mew = m/2)
 axs[1].set_xlabel('Production $\\rm[kg]$')
 # axs[1].set_ylim(None, dfout.max()['utility'])
 axs[1].set_ylabel('Utility [uU]')
@@ -208,54 +218,55 @@ axs[1].grid(alpha =0.3 ,ls ='--')
 axs[1].legend()
 
 
-# fig1.savefig('test_set_CS1.png', dpi = 600,format = 'png',bbox_inches  = 'tight')  
+fig1.savefig('./results/Figures/PA_model2.svg', bbox_inches  = 'tight')  
 
-plt.show()
 
-x = torch.randn(10, 1)
-f_before = model.forward(x)
-pytorch_model = None
 
-try:
-    dir = './results/Models/CS2_ReLU_'+mat+'.onnx'
-    torch.onnx.export(
-        model,
-        x,
-        dir,
-        input_names=['input'],
-        output_names=['output'],
-        dynamic_axes={
-            'input': {0: 'batch_size'},
-            'output': {0: 'batch_size'},
-        }
-    )
-    # torch.onnx.export(
-    #     model,
-    #     x,
-    #     dir,
-    #     input_names=['Volume'],
-    #     output_names=['Final Time', 'Utility'],
-    #     dynamic_axes={
-    #         'Volume': {0: 'batch_size'},
-    #         'Final Time': {0: 'batch_size'},
-    #         'Utility': {0: 'batch_size'}
-    #     }
-    # )
-    write_onnx_model_with_bounds(dir, None, scaled_input_bounds)
-    print(f"Wrote PyTorch model to {dir}")
-except:
-    dir = '../results/Models/CS2_ReLU_'+mat+'.onnx'
-    torch.onnx.export(
-        model,
-        x,
-        dir,
-        input_names=['conc_end'],
-        output_names=['Final Time', 'Utility'],
-        dynamic_axes={
-            'conc_end': {0: 'batch_size'},
-            'Final Time': {0: 'batch_size'},
-            'Utility': {0: 'batch_size'}
-        }
-    )
-    write_onnx_model_with_bounds(dir, None, scaled_input_bounds)
-    print(f"Wrote PyTorch model to {dir}")
+
+# x = torch.randn(10, 1)
+# f_before = model.forward(x)
+# pytorch_model = None
+
+# try:
+#     dir = './results/Models/CS2_ReLU_'+mat+'.onnx'
+#     torch.onnx.export(
+#         model,
+#         x,
+#         dir,
+#         input_names=['input'],
+#         output_names=['output'],
+#         dynamic_axes={
+#             'input': {0: 'batch_size'},
+#             'output': {0: 'batch_size'},
+#         }
+#     )
+#     # torch.onnx.export(
+#     #     model,
+#     #     x,
+#     #     dir,
+#     #     input_names=['Volume'],
+#     #     output_names=['Final Time', 'Utility'],
+#     #     dynamic_axes={
+#     #         'Volume': {0: 'batch_size'},
+#     #         'Final Time': {0: 'batch_size'},
+#     #         'Utility': {0: 'batch_size'}
+#     #     }
+#     # )
+#     write_onnx_model_with_bounds(dir, None, scaled_input_bounds)
+#     print(f"Wrote PyTorch model to {dir}")
+# except:
+#     dir = '../results/Models/CS2_ReLU_'+mat+'.onnx'
+#     torch.onnx.export(
+#         model,
+#         x,
+#         dir,
+#         input_names=['conc_end'],
+#         output_names=['Final Time', 'Utility'],
+#         dynamic_axes={
+#             'conc_end': {0: 'batch_size'},
+#             'Final Time': {0: 'batch_size'},
+#             'Utility': {0: 'batch_size'}
+#         }
+#     )
+#     write_onnx_model_with_bounds(dir, None, scaled_input_bounds)
+#     print(f"Wrote PyTorch model to {dir}")

@@ -57,9 +57,9 @@ for i in range(N_samples):
             ))/12000
         feas = 1
     except:
-        changeover = 100/12
-        storage = 10/12
-        energy = 10/12
+        changeover = 100/12*1e6
+        storage = 10/12*1e6
+        energy = 10/12*1e6
         feas = 0
     df['cost'] += [changeover + storage + energy]
     df['feas'] += [feas]

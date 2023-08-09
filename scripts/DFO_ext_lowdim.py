@@ -258,8 +258,8 @@ def get_cost_bi(input_data, Production, TP, Sales, penalization=1):
         changeover = pyo.value(res_Sch.CCH_cost)*12
         storage = pyo.value(res_Sch.st_cost)*12/20
     except:
-        changeover = 100.
-        storage = 10
+        changeover = 100.*1e6
+        storage = 10*1e6
     # storage = pyo.value(res_Sch.CCH_cost)*24
 
     prod_cost = sum(
@@ -430,9 +430,9 @@ def get_cost_tri(input_data, Production, TP, Sales, penalization=1):
         storage = pyo.value(res_Sch.st_cost)*12/20
         energy = pyo.value(sum(res_Sch.energy_1[n] + res_Sch.energy_2[n] for n in res_Sch.N))/1000
     except:
-        changeover = 100.
-        energy = 10
-        storage = 10
+        changeover = 100.*1e6
+        energy = 10*1e6
+        storage = 10*1e6
     # storage = pyo.value(res_Sch.CCH_cost)*24
 
     prod_cost = sum(
@@ -550,333 +550,334 @@ def wrapper_tri(x, input_data, penalty=1):
 
     return get_cost_tri(input_data, Production, TP, Sales, penalization=penalty)
 
+if __name__ == "__main__":
+    
+    Nt = 5
 
-Nt = 5
+    data_copy = data.copy()
+    data_copy[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
+    res = centralised(data_copy)
+    f_actual = pyo.value(res.obj)
+    print(f"Centralised bilevel objective: {f_actual}")
 
-data_copy = data.copy()
-data_copy[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
-res = centralised(data_copy)
-f_actual = pyo.value(res.obj)
-print(f"Centralised bilevel objective: {f_actual}")
+    t0 = time.time()
+    data_copy = data.copy()
+    data_copy[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
+    res = centralised_planning(data_copy)
+    t1 = time.time()
+    f_actual = pyo.value(res.obj)
+    print(f"Centralised planning objective: {f_actual}")
 
-t0 = time.time()
-data_copy = data.copy()
-data_copy[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
-res = centralised_planning(data_copy)
-t1 = time.time()
-f_actual = pyo.value(res.obj)
-print(f"Centralised planning objective: {f_actual}")
+    central_opt = {
+            'x': None,
+            'upper': {'time': t1 - t0, 'obj': f_actual},
+            'bi': {'time': None, 'obj': None},
+            'tri': {'time': None, 'obj': None},
+        }
 
-central_opt = {
-        'x': None,
-        'upper': {'time': t1 - t0, 'obj': f_actual},
-        'bi': {'time': None, 'obj': None},
-        'tri': {'time': None, 'obj': None},
-    }
+    x_test = []
+    x_test += [pyo.value(res.Prod['PA', 'Asia',t]) for t in res.T]
+    x_test += [pyo.value(res.Prod['PB', 'Asia',t]) for t in res.T]
+    x_test += [pyo.value(res.Prod['TEE', 'Asia',t]) for t in res.T]
+    x_test += [pyo.value(res.Prod['TGE', 'Asia',t]) for t in res.T]
+    x_test += [pyo.value(res.Prod['PC','America',t]) for t in res.T]
+    x_test += [pyo.value(res.Prod['PD','America',t]) for t in res.T]
 
-x_test = []
-x_test += [pyo.value(res.Prod['PA', 'Asia',t]) for t in res.T]
-x_test += [pyo.value(res.Prod['PB', 'Asia',t]) for t in res.T]
-x_test += [pyo.value(res.Prod['TEE', 'Asia',t]) for t in res.T]
-x_test += [pyo.value(res.Prod['TGE', 'Asia',t]) for t in res.T]
-x_test += [pyo.value(res.Prod['PC','America',t]) for t in res.T]
-x_test += [pyo.value(res.Prod['PD','America',t]) for t in res.T]
+    x_test += [pyo.value(res.SA['PA',  t]) for t in res.T]
+    x_test += [pyo.value(res.SA['PB',  t]) for t in res.T]
+    x_test += [pyo.value(res.SA['TEE', t]) for t in res.T]
+    x_test += [pyo.value(res.SA['TGE', t]) for t in res.T]
+    x_test += [pyo.value(res.SA['PC',  t]) for t in res.T]
+    x_test += [pyo.value(res.SA['PD',  t]) for t in res.T]
 
-x_test += [pyo.value(res.SA['PA',  t]) for t in res.T]
-x_test += [pyo.value(res.SA['PB',  t]) for t in res.T]
-x_test += [pyo.value(res.SA['TEE', t]) for t in res.T]
-x_test += [pyo.value(res.SA['TGE', t]) for t in res.T]
-x_test += [pyo.value(res.SA['PC',  t]) for t in res.T]
-x_test += [pyo.value(res.SA['PD',  t]) for t in res.T]
+    x_test += [pyo.value(res.PI[t]) for t in res.T]
+    x_test += [pyo.value(res.PAI[t]) for t in res.T]
+    x_test += [pyo.value(res.TP['Asia',tc]) for tc in res.Tc]
+    x_test += [pyo.value(res.TP['America',tc]) for tc in res.Tc]
 
-x_test += [pyo.value(res.PI[t]) for t in res.T]
-x_test += [pyo.value(res.PAI[t]) for t in res.T]
-x_test += [pyo.value(res.TP['Asia',tc]) for tc in res.Tc]
-x_test += [pyo.value(res.TP['America',tc]) for tc in res.Tc]
+    central_opt['x'] = x_test
 
-central_opt['x'] = x_test
+    bounds1 = np.array(x_test)[:168].reshape((14, 12))
+    bounds2 = np.array(x_test)[168:].reshape((2, 5))
+    bounds = np.concatenate((np.max(bounds1, axis=1), np.max(bounds2, axis=1)))
+    bounds = [(0, b) for b in bounds]
 
-bounds1 = np.array(x_test)[:168].reshape((14, 12))
-bounds2 = np.array(x_test)[168:].reshape((2, 5))
-bounds = np.concatenate((np.max(bounds1, axis=1), np.max(bounds2, axis=1)))
-bounds = [(0, b) for b in bounds]
+    b = []
+    b += [(0, 20000)]*24 + [(0, 500000)]*24 + [(0, 20000)]*12 + [(0, 30000)]*12 + [(0, 10000)]*24 + [(0, 4000000)]*24
+    b += [(0, 15000)]*24 + [(0, 10000)]*12 + [(0, 5000)]*12 + [(0, 1000)]*5 + [(0, 2000)]*5
 
-b = []
-b += [(0, 20000)]*24 + [(0, 500000)]*24 + [(0, 20000)]*12 + [(0, 30000)]*12 + [(0, 10000)]*24 + [(0, 4000000)]*24
-b += [(0, 15000)]*24 + [(0, 10000)]*12 + [(0, 5000)]*12 + [(0, 1000)]*5 + [(0, 2000)]*5
+    centralized = {}
 
-centralized = {}
+    DFO_obj = wrapper(x_test, data_copy, 1000)
 
-DFO_obj = wrapper(x_test, data_copy, 1000)
+    t0 = time.time()
+    DFO_bi_obj = wrapper_bi(x_test, data_copy, 1000)
+    t1 = time.time()
 
-t0 = time.time()
-DFO_bi_obj = wrapper_bi(x_test, data_copy, 1000)
-t1 = time.time()
+    central_opt['bi'] = {'time': t1 - t0, 'obj': DFO_bi_obj}
 
-central_opt['bi'] = {'time': t1 - t0, 'obj': DFO_bi_obj}
 
+    dfo_f = lambda x: wrapper(x, data_copy, 1000)
+    dfo_bi_f = lambda x: wrapper_bi(x, data_copy, 1000)
+    dfo_tri_f = lambda x: wrapper_tri(x, data_copy, 1000)
 
-dfo_f = lambda x: wrapper(x, data_copy, 1000)
-dfo_bi_f = lambda x: wrapper_bi(x, data_copy, 1000)
-dfo_tri_f = lambda x: wrapper_tri(x, data_copy, 1000)
 
 
 
+    x0 = np.array([max(min(x_test[i]*(1+0.005*np.random.normal()),b[i][1]),0) for i in range(len(x_test))])
 
-x0 = np.array([max(min(x_test[i]*(1+0.005*np.random.normal()),b[i][1]),0) for i in range(len(x_test))])
 
+    init_guess = dfo_f(x0)
+    init_bi_guess = dfo_bi_f(x_test)
+    init_tri_guess = dfo_tri_f(x_test)
 
-init_guess = dfo_f(x0)
-init_bi_guess = dfo_bi_f(x_test)
-init_tri_guess = dfo_tri_f(x_test)
+    print('Centralised optimal DFO objective: ', DFO_obj)
+    print('Centralised bi-level upper objective: ', DFO_bi_obj, ' in ', t1-t0, ' seconds')
+    t0 = time.time()
+    DFO_tri_obj = wrapper_tri(x_test, data_copy, 1000)
+    t1 = time.time()
+    central_opt['tri'] = {'time': t1 - t0, 'obj': DFO_tri_obj}
+    print('Centralised tri-level upper objective: ', DFO_tri_obj, ' in ', t1-t0, ' seconds')
 
-print('Centralised optimal DFO objective: ', DFO_obj)
-print('Centralised bi-level upper objective: ', DFO_bi_obj, ' in ', t1-t0, ' seconds')
-t0 = time.time()
-DFO_tri_obj = wrapper_tri(x_test, data_copy, 1000)
-t1 = time.time()
-central_opt['tri'] = {'time': t1 - t0, 'obj': DFO_tri_obj}
-print('Centralised tri-level upper objective: ', DFO_tri_obj, ' in ', t1-t0, ' seconds')
+    with open('./results/optima/centralized_low.json', 'w') as f:
+        json.dump(central_opt, f)
 
-# with open('./results/optima/centralized.json', 'w') as f:
-#     json.dump(central_opt, f)
 
 
+    t0 = time.time()
+    test = minimize(dfo_f, x0, bounds = b, args=(), method='Nelder-Mead', constraints=(), tol=None, callback=None, options={'maxfev': 30000})
+    # test = minimize(dfo_f, x0, args=(), method='Nelder-Mead', constraints=(), tol=None, callback=None, options={'maxfev': 10000})
+    t1 = time.time()
+    print('Test DFO optimum: ', test['fun'], ' in ', t1-t0, ' seconds starting from initial value of: ', init_guess)
+    print()
 
-t0 = time.time()
-test = minimize(dfo_f, x0, bounds = b, args=(), method='Nelder-Mead', constraints=(), tol=None, callback=None, options={'maxfev': 30000})
-# test = minimize(dfo_f, x0, args=(), method='Nelder-Mead', constraints=(), tol=None, callback=None, options={'maxfev': 10000})
-t1 = time.time()
-print('Test DFO optimum: ', test['fun'], ' in ', t1-t0, ' seconds starting from initial value of: ', init_guess)
-print()
+    DFO_test = wrapper(test.x, data_copy, 10000)
+    print(DFO_test)
+
 
-DFO_test = wrapper(test.x, data_copy, 10000)
-print(DFO_test)
-
-
-
-
-
+
+
 
 
-
-
-
-# show_options(solver='minimize')
-
-
-
-b = np.array([list(b_) for b_ in b], dtype=float)
-x_test = np.array([x_ for x_ in x_test], dtype=float)
-
-# s = 'Nomad'
-# t0 = time.time()
-# result, history = \
-#     skopt(dfo_f, x0, b, 2000, method='nomad', SEED=0)
-# t1 = time.time()
-# print(f"{s} done: Best eval after {(t1-t0)/60} min for {6000} evals: {result.optval} with initial guess {init_guess}")
-
-# s = 'Nomad'
-# t0 = time.time()
-# result, history = \
-#     skopt(dfo_bi_f, x_test, b, 6, method='nomad', SEED=0)
-# t1 = time.time()
-# print(f"{s} done: Best eval after {(t1-t0)/60} min for {6000} evals: {result.optval} with initial guess {init_bi_guess}")
-
-
-# t0 = time.time()
-# test = simplex_method(f_Py, x_test,b, 10, 1, max_f_eval = 5, \
-#                    mu_con = 1e3, rnd_seed = 0, initialisation = 0.1)
-# t1 = time.time()
-# print(f"{s} done: Best eval after {(t1-t0)/60} min for {100} evals: {test['f_best_so_far'][-1]} with initial guess {init_bi_guess}")
-
-# s = 'Diff. evol.'
-# t0 = time.time()
-# result = differential_evolution(dfo_f, b, popsize=10, maxiter=10)
-# t1 = time.time()
-# print(s, result.fun, (t1-t0), ' seconds from init guess: ', init_guess)
-# print(s, 'Done')
-
-
-# s = 'Py-BOBYQA'
-# def f_Py(x):
-#     return dfo_f(x), [0]
-# t0 = time.time()
-# pybobyqa = PyBobyqaWrapper().solve(
-#         f_Py,
-#         x0,
-#         bounds=np.array(b).T,
-#         maxfun=400,
-#         constraints=1,
-#         seek_global_minimum=True,
-#         objfun_has_noise=False,
-#         scaling_within_bounds=True,
-# )  
-# t1 = time.time()
-# print(f"{s} done: Best eval after {(t1-t0)/60} min: {pybobyqa['f_best_so_far'][-1]}")
-
-def f_Py(x):
-    return dfo_bi_f(x), [0]
-
-s = 'Py-BOBYQA'
-t0 = time.time()
-pybobyqa = PyBobyqaWrapper().solve(
-        f_Py,
-        x_test,
-        bounds=np.array(b).T,
-        maxfun=400,
-        constraints=1,
-        seek_global_minimum=True,
-        objfun_has_noise=False,
-        scaling_within_bounds=True,
-)  
-t1 = time.time()
-print(f"{s} done: Best bi eval after {(t1-t0)/60} min: {pybobyqa['f_best_so_far'][-1]}")
-
-bi_opt = {
-        'x': list(pybobyqa['x_best_so_far'][-1]),
-        'upper': {'time': None, 'obj': None},
-        'bi': {'time': None, 'obj': None},
-        'tri': {'time': None, 'obj': None},
-    }
-
-t0 = time.time()
-upper = dfo_f(pybobyqa['x_best_so_far'][-1])
-t1 = time.time()
-bi_opt['upper'] = {'time': t1 - t0, 'obj': upper}
-t0 = time.time()
-bi = dfo_bi_f(pybobyqa['x_best_so_far'][-1])
-t1 = time.time()
-bi_opt['bi'] = {'time': t1 - t0, 'obj': bi}
-t0 = time.time()
-tri = dfo_tri_f(pybobyqa['x_best_so_far'][-1])
-t1 = time.time()
-bi_opt['tri'] = {'time': t1 - t0, 'obj': tri}
-
-with open('./results/optima/bi_Py-BOBYQA_limit.json', 'w') as f:
-    json.dump(bi_opt, f)
-
-
-# s = 'CUATRO-l'
-# t0 = time.time()
-# result = CUATRO(
-#         f_Py,
-#         x_test,
-#         1000,
-#         bounds=np.array(b),
-#         constraints=1,
-#         N_min_samples = budget,
-#         max_f_eval=budget,
-#         method='local',
-
-# )  
-# t1 = time.time()
-# print(f"{s} done: Best bi eval after {(t1-t0)/60} min: {result['f_best_so_far'][-1]}")
-
-# s = 'CUATRO-g'
-# t0 = time.time()
-# result = CUATRO(
-#         f_Py,
-#         x_test,
-#         10,
-#         bounds=np.array(b),
-#         constraints=1,
-#         N_min_samples = budget,
-#         max_f_eval=budget,
-#         method='global',
-
-# )  
-# t1 = time.time()
-# print(f"{s} done: Best bi eval after {(t1-t0)/60} min: {result['f_best_so_far'][-1]}")
-
-# with open('./results/optima/tri_Py-BOBYQA.json') as f:
-#     bi_opt = json.load(f)
-
-def f_Py(x):
-    return dfo_tri_f(x), [0]
-
-# s = 'TR'
-# t0 = time.time()
-# TR = optimizer(dfo_tri_f, x_test, b, 80,  0.01)
-# t1 = time.time()
-# print(f"{s} done: Best tri eval after {(t1-t0)/60} min: {TR[0]}")
-
-s = 'Py-BOBYQA'
-t0 = time.time()
-pybobyqa = PyBobyqaWrapper().solve(
-        f_Py,
-        bi_opt['x'],
-        bounds=np.array(b).T,
-        maxfun=400,
-        constraints=1,
-        seek_global_minimum=True,
-        objfun_has_noise=False,
-        scaling_within_bounds=True,
-)  
-t1 = time.time()
-print(f"{s} done: Best tri eval after {(t1-t0)/60} min: {pybobyqa['f_best_so_far'][-1]}")
-
-tri_opt = {
-        'x': list(pybobyqa['x_best_so_far'][-1]),
-        'upper': {'time': None, 'obj': None},
-        'bi': {'time': None, 'obj': None},
-        'tri': {'time': None, 'obj': None},
-    }
-
-t0 = time.time()
-upper = dfo_f(pybobyqa['x_best_so_far'][-1])
-t1 = time.time()
-tri_opt['upper'] = {'time': t1 - t0, 'obj': upper}
-t0 = time.time()
-bi = dfo_bi_f(pybobyqa['x_best_so_far'][-1])
-t1 = time.time()
-tri_opt['bi'] = {'time': t1 - t0, 'obj': bi}
-t0 = time.time()
-tri = dfo_tri_f(pybobyqa['x_best_so_far'][-1])
-t1 = time.time()
-tri_opt['tri'] = {'time': t1 - t0, 'obj': tri}
-
-with open('./results/optima/tri_Py-BOBYQA_limit.json', 'w') as f:
-    json.dump(tri_opt, f)
-
-# s = 'CUATRO-l'
-# t0 = time.time()
-# result = CUATRO(
-#         f_Py,
-#         x_test,
-#         1000,
-#         bounds=np.array(b),
-#         constraints=1,
-#         N_min_samples = budget,
-#         max_f_eval=budget,
-#         method='local',
-# )  
-# t1 = time.time()
-# print(f"{s} done: Best tri eval after {(t1-t0)/60} min: {result['f_best_so_far'][-1]}")
-
-
-# t0 = time.time()
-# s = 'DIRECT-L'
-# def f_DIR(x, grad):
-#     return dfo_f(x), [0]
-# DIRECT = DIRECTWrapper().solve(f_DIR, x0, b, maxfun=2000, constraints=1)
-# t1 = time.time()
-# # DIRECT['f_best_so_far'] = preprocess_BO(DIRECT['f_best_so_far'], y0[0])
-# print('DIRECT-L', DIRECT['f_best_so_far'][-1], (t1-t0), ' seconds from init guess: ', init_guess)
-# print(s, 'Done')
-
-# t0 = time.time()
-# s = 'DIRECT-L'
-# def f_DIR(x, grad):
-#     return dfo_bi_f(x), [0]
-# DIRECT = DIRECTWrapper().solve(f_DIR, x_test, b, maxfun=1000, constraints=1)
-# t1 = time.time()
-# # DIRECT['f_best_so_far'] = preprocess_BO(DIRECT['f_best_so_far'], y0[0])
-# print('DIRECT-L', DIRECT['f_best_so_far'][-1], (t1-t0), ' seconds from init guess: ', init_bi_guess)
-# print(s, 'Done')
-
-
-
-# print('Bi-level DFO optimum on original DFO function: ', wrapper(DIRECT['x_best_so_far'][-1], data_copy, 100))
-# print('Bi-level DFO optimum on bi-level DFO function: ', wrapper_bi(DIRECT['x_best_so_far'][-1], data_copy, 100))
+
+
+
+
+    # show_options(solver='minimize')
+
+
+
+    b = np.array([list(b_) for b_ in b], dtype=float)
+    x_test = np.array([x_ for x_ in x_test], dtype=float)
+
+    # s = 'Nomad'
+    # t0 = time.time()
+    # result, history = \
+    #     skopt(dfo_f, x0, b, 2000, method='nomad', SEED=0)
+    # t1 = time.time()
+    # print(f"{s} done: Best eval after {(t1-t0)/60} min for {6000} evals: {result.optval} with initial guess {init_guess}")
+
+    # s = 'Nomad'
+    # t0 = time.time()
+    # result, history = \
+    #     skopt(dfo_bi_f, x_test, b, 6, method='nomad', SEED=0)
+    # t1 = time.time()
+    # print(f"{s} done: Best eval after {(t1-t0)/60} min for {6000} evals: {result.optval} with initial guess {init_bi_guess}")
+
+
+    # t0 = time.time()
+    # test = simplex_method(f_Py, x_test,b, 10, 1, max_f_eval = 5, \
+    #                    mu_con = 1e3, rnd_seed = 0, initialisation = 0.1)
+    # t1 = time.time()
+    # print(f"{s} done: Best eval after {(t1-t0)/60} min for {100} evals: {test['f_best_so_far'][-1]} with initial guess {init_bi_guess}")
+
+    # s = 'Diff. evol.'
+    # t0 = time.time()
+    # result = differential_evolution(dfo_f, b, popsize=10, maxiter=10)
+    # t1 = time.time()
+    # print(s, result.fun, (t1-t0), ' seconds from init guess: ', init_guess)
+    # print(s, 'Done')
+
+
+    # s = 'Py-BOBYQA'
+    # def f_Py(x):
+    #     return dfo_f(x), [0]
+    # t0 = time.time()
+    # pybobyqa = PyBobyqaWrapper().solve(
+    #         f_Py,
+    #         x0,
+    #         bounds=np.array(b).T,
+    #         maxfun=400,
+    #         constraints=1,
+    #         seek_global_minimum=True,
+    #         objfun_has_noise=False,
+    #         scaling_within_bounds=True,
+    # )  
+    # t1 = time.time()
+    # print(f"{s} done: Best eval after {(t1-t0)/60} min: {pybobyqa['f_best_so_far'][-1]}")
+
+    def f_Py(x):
+        return dfo_bi_f(x), [0]
+
+    s = 'Py-BOBYQA'
+    t0 = time.time()
+    pybobyqa = PyBobyqaWrapper().solve(
+            f_Py,
+            x_test,
+            bounds=np.array(b).T,
+            maxfun=400,
+            constraints=1,
+            seek_global_minimum=True,
+            objfun_has_noise=False,
+            scaling_within_bounds=True,
+    )  
+    t1 = time.time()
+    print(f"{s} done: Best bi eval after {(t1-t0)/60} min: {pybobyqa['f_best_so_far'][-1]}")
+
+    bi_opt = {
+            'x': list(pybobyqa['x_best_so_far'][-1]),
+            'upper': {'time': None, 'obj': None},
+            'bi': {'time': None, 'obj': None},
+            'tri': {'time': None, 'obj': None},
+        }
+
+    t0 = time.time()
+    upper = dfo_f(pybobyqa['x_best_so_far'][-1])
+    t1 = time.time()
+    bi_opt['upper'] = {'time': t1 - t0, 'obj': upper}
+    t0 = time.time()
+    bi = dfo_bi_f(pybobyqa['x_best_so_far'][-1])
+    t1 = time.time()
+    bi_opt['bi'] = {'time': t1 - t0, 'obj': bi}
+    t0 = time.time()
+    tri = dfo_tri_f(pybobyqa['x_best_so_far'][-1])
+    t1 = time.time()
+    bi_opt['tri'] = {'time': t1 - t0, 'obj': tri}
+
+    with open('./results/optima/bi_Py-BOBYQA_low.json', 'w') as f:
+        json.dump(bi_opt, f)
+
+
+    # s = 'CUATRO-l'
+    # t0 = time.time()
+    # result = CUATRO(
+    #         f_Py,
+    #         x_test,
+    #         1000,
+    #         bounds=np.array(b),
+    #         constraints=1,
+    #         N_min_samples = budget,
+    #         max_f_eval=budget,
+    #         method='local',
+
+    # )  
+    # t1 = time.time()
+    # print(f"{s} done: Best bi eval after {(t1-t0)/60} min: {result['f_best_so_far'][-1]}")
+
+    # s = 'CUATRO-g'
+    # t0 = time.time()
+    # result = CUATRO(
+    #         f_Py,
+    #         x_test,
+    #         10,
+    #         bounds=np.array(b),
+    #         constraints=1,
+    #         N_min_samples = budget,
+    #         max_f_eval=budget,
+    #         method='global',
+
+    # )  
+    # t1 = time.time()
+    # print(f"{s} done: Best bi eval after {(t1-t0)/60} min: {result['f_best_so_far'][-1]}")
+
+    # with open('./results/optima/tri_Py-BOBYQA.json') as f:
+    #     bi_opt = json.load(f)
+
+    def f_Py(x):
+        return dfo_tri_f(x), [0]
+
+    # s = 'TR'
+    # t0 = time.time()
+    # TR = optimizer(dfo_tri_f, x_test, b, 80,  0.01)
+    # t1 = time.time()
+    # print(f"{s} done: Best tri eval after {(t1-t0)/60} min: {TR[0]}")
+
+    s = 'Py-BOBYQA'
+    t0 = time.time()
+    pybobyqa = PyBobyqaWrapper().solve(
+            f_Py,
+            bi_opt['x'],
+            bounds=np.array(b).T,
+            maxfun=400,
+            constraints=1,
+            seek_global_minimum=True,
+            objfun_has_noise=False,
+            scaling_within_bounds=True,
+    )  
+    t1 = time.time()
+    print(f"{s} done: Best tri eval after {(t1-t0)/60} min: {pybobyqa['f_best_so_far'][-1]}")
+
+    tri_opt = {
+            'x': list(pybobyqa['x_best_so_far'][-1]),
+            'upper': {'time': None, 'obj': None},
+            'bi': {'time': None, 'obj': None},
+            'tri': {'time': None, 'obj': None},
+        }
+
+    t0 = time.time()
+    upper = dfo_f(pybobyqa['x_best_so_far'][-1])
+    t1 = time.time()
+    tri_opt['upper'] = {'time': t1 - t0, 'obj': upper}
+    t0 = time.time()
+    bi = dfo_bi_f(pybobyqa['x_best_so_far'][-1])
+    t1 = time.time()
+    tri_opt['bi'] = {'time': t1 - t0, 'obj': bi}
+    t0 = time.time()
+    tri = dfo_tri_f(pybobyqa['x_best_so_far'][-1])
+    t1 = time.time()
+    tri_opt['tri'] = {'time': t1 - t0, 'obj': tri}
+
+    with open('./results/optima/tri_Py-BOBYQA_low.json', 'w') as f:
+        json.dump(tri_opt, f)
+
+    # s = 'CUATRO-l'
+    # t0 = time.time()
+    # result = CUATRO(
+    #         f_Py,
+    #         x_test,
+    #         1000,
+    #         bounds=np.array(b),
+    #         constraints=1,
+    #         N_min_samples = budget,
+    #         max_f_eval=budget,
+    #         method='local',
+    # )  
+    # t1 = time.time()
+    # print(f"{s} done: Best tri eval after {(t1-t0)/60} min: {result['f_best_so_far'][-1]}")
+
+
+    # t0 = time.time()
+    # s = 'DIRECT-L'
+    # def f_DIR(x, grad):
+    #     return dfo_f(x), [0]
+    # DIRECT = DIRECTWrapper().solve(f_DIR, x0, b, maxfun=2000, constraints=1)
+    # t1 = time.time()
+    # # DIRECT['f_best_so_far'] = preprocess_BO(DIRECT['f_best_so_far'], y0[0])
+    # print('DIRECT-L', DIRECT['f_best_so_far'][-1], (t1-t0), ' seconds from init guess: ', init_guess)
+    # print(s, 'Done')
+
+    # t0 = time.time()
+    # s = 'DIRECT-L'
+    # def f_DIR(x, grad):
+    #     return dfo_bi_f(x), [0]
+    # DIRECT = DIRECTWrapper().solve(f_DIR, x_test, b, maxfun=1000, constraints=1)
+    # t1 = time.time()
+    # # DIRECT['f_best_so_far'] = preprocess_BO(DIRECT['f_best_so_far'], y0[0])
+    # print('DIRECT-L', DIRECT['f_best_so_far'][-1], (t1-t0), ' seconds from init guess: ', init_bi_guess)
+    # print(s, 'Done')
+
+
+
+    # print('Bi-level DFO optimum on original DFO function: ', wrapper(DIRECT['x_best_so_far'][-1], data_copy, 100))
+    # print('Bi-level DFO optimum on bi-level DFO function: ', wrapper_bi(DIRECT['x_best_so_far'][-1], data_copy, 100))
 

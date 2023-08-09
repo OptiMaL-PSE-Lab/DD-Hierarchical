@@ -25,8 +25,8 @@ from omlt.io import load_onnx_neural_network
 
 from omlt.neuralnet import ReluBigMFormulation
 
-from data.planning.planning_sch_bilevel import data as import_data
-from data.planning.planning_sch_bilevel import scheduling_data
+from data.planning.planning_sch_bilevel_lowdim import data as import_data
+from data.planning.planning_sch_bilevel_lowdim import scheduling_data
 
 def state_to_control_t(t, N_t, T_set):
     dummy_array = np.arange(1, 1+N_t)

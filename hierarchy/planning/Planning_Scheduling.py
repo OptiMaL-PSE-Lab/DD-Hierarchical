@@ -15,7 +15,7 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverStatus, TerminationCondition
 
 # from data.planning_sch import data as import_data
-from data.planning.planning_sch_bilevel import data as import_data
+from data.planning.planning_sch_bilevel_lowdim import data as import_data
 # from regex import E
 
 def state_to_control_t(t, N_t, T_set):

@@ -12,8 +12,8 @@ from openbox import Optimizer
 from openbox import space as sp
 
 from training_Sch_NN import main as training
-from hierarchy.DFO_ext_all import wrapper, wrapper_bi, wrapper_tri
-from hierarchy.planning.Planning_Surrogate import centralised_all
+from hierarchy.DFO_ext_all_integr import wrapper, wrapper_bi, wrapper_tri
+from hierarchy.planning.Planning_Integrated import centralised_all
 from data.planning.planning_sch_bilevel_lowdim import scheduling_data, data
 
 def pyo2vec(res):
@@ -47,6 +47,7 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=1000, help="Number of training epochs")
     parser.add_argument("--nodes1", type=int, default=50, help="Number of nodes in first hidden layer")
     parser.add_argument("--nodes2", type=int, default=20, help="Number of nodes in second hidden layer")
+    parser.add_argument("--data", type=str, default="scheduling", help="Dataset - 'scheduling', 'integrated'")
     parser.add_argument("--save", type=bool, default=False, help="Flag indicating if model(s) should get saved")
 
     return parser
@@ -55,7 +56,7 @@ def parse_args():
 # for n1 in nodes1:
 #     for n2 in nodes2:
 #         parser = parse_args()
-#         args = parser.parse_args(['--nodes1', str(n1), '--nodes2', str(n2), '--save', 'True'])
+#         args = parser.parse_args(['--nodes1', str(n1), '--nodes2', str(n2), '--save', 'True', '--data', 'integrated'])
 #         training(args)
 
 #         t0 = time.perf_counter()
@@ -65,7 +66,7 @@ def parse_args():
 #         t = time.perf_counter()
 #         print(f"Objective: {pyo.value(res.obj)} in {(t - t0)/60} min")
 
-#         dir = f"./results/Models/scheduling_RegNN_{n1}_{n2}.json"
+#         dir = f"./results/Models/integrated_RegNN_{n1}_{n2}.json"
 #         with open(dir, 'r+') as file:
 #             file_data = json.load(file)
 #             file_data["opt_time_s"] = t - t0
@@ -107,12 +108,12 @@ def small(config):
     n1, n2 = config['nodes1'], config['nodes2']
 
     try:
-        dir = f"./results/Models/scheduling_RegNN_{n1}_{n2}.json"
+        dir = f"./results/Models/integrated_RegNN_{n1}_{n2}.json"
         with open(dir, 'r+') as file:
             file_data = json.load(file)
     except:
         parser = parse_args()
-        args = parser.parse_args(['--nodes1', str(n1), '--nodes2', str(n2), '--save', 'True'])
+        args = parser.parse_args(['--nodes1', str(n1), '--nodes2', str(n2), '--save', 'True', '--data', 'integrated'])
         training(args)
 
     t0 = time.perf_counter()
@@ -122,7 +123,7 @@ def small(config):
     t = time.perf_counter()
     print(f"Objective: {pyo.value(res.obj)} in {(t - t0)/60} min")
 
-    dir = f"./results/Models/scheduling_RegNN_{n1}_{n2}.json"
+    dir = f"./results/Models/integrated_RegNN_{n1}_{n2}.json"
     with open(dir, 'r+') as file:
         file_data = json.load(file)
         file_data["opt_time_s"] = t - t0
@@ -152,7 +153,7 @@ def small(config):
     with open(dir, 'w') as f:
         json.dump(file_data, f)
 
-    return {'objectives': [file_data['opt_time_s'], file_data['hierarchy']['bi']['obj']]}
+    return {'objectives': [file_data['opt_time_s'], file_data['hierarchy']['tri']['obj']]}
 
 
 
@@ -160,12 +161,12 @@ def medium(config):
     n1, n2 = config['nodes1'], config['nodes2']
 
     try:
-        dir = f"./results/Models/scheduling_RegNN_{n1}_{n2}.json"
+        dir = f"./results/Models/integrated_RegNN_{n1}_{n2}.json"
         with open(dir, 'r+') as file:
             file_data = json.load(file)
     except:
         parser = parse_args()
-        args = parser.parse_args(['--nodes1', str(n1), '--nodes2', str(n2), '--save', 'True'])
+        args = parser.parse_args(['--nodes1', str(n1), '--nodes2', str(n2), '--save', 'True', '--data', 'integrated'])
         training(args)
 
     t0 = time.perf_counter()
@@ -175,7 +176,7 @@ def medium(config):
     t = time.perf_counter()
     print(f"Objective: {pyo.value(res.obj)} in {(t - t0)/60} min")
 
-    dir = f"./results/Models/scheduling_RegNN_{n1}_{n2}.json"
+    dir = f"./results/Models/integrated_RegNN_{n1}_{n2}.json"
     with open(dir, 'r+') as file:
         file_data = json.load(file)
         file_data["opt_time_m"] = t - t0
@@ -205,19 +206,19 @@ def medium(config):
     with open(dir, 'w') as f:
         json.dump(file_data, f)
 
-    return {'objectives': [file_data['opt_time_m'], file_data['medium']['bi']['obj']]}
+    return {'objectives': [file_data['opt_time_m'], file_data['medium']['tri']['obj']]}
 
 
 def large(config):
     n1, n2 = config['nodes1'], config['nodes2']
 
     try:
-        dir = f"./results/Models/scheduling_RegNN_{n1}_{n2}.json"
+        dir = f"./results/Models/integrated_RegNN_{n1}_{n2}.json"
         with open(dir, 'r+') as file:
             file_data = json.load(file)
     except:
         parser = parse_args()
-        args = parser.parse_args(['--nodes1', str(n1), '--nodes2', str(n2), '--save', 'True'])
+        args = parser.parse_args(['--nodes1', str(n1), '--nodes2', str(n2), '--save', 'True', '--data', 'integrated'])
         training(args)
 
     t0 = time.perf_counter()
@@ -227,7 +228,7 @@ def large(config):
     t = time.perf_counter()
     print(f"Objective: {pyo.value(res.obj)} in {(t - t0)/60} min")
 
-    dir = f"./results/Models/scheduling_RegNN_{n1}_{n2}.json"
+    dir = f"./results/Models/integrated_RegNN_{n1}_{n2}.json"
     with open(dir, 'r+') as file:
         file_data = json.load(file)
         file_data["opt_time_l"] = t - t0
@@ -257,7 +258,7 @@ def large(config):
     with open(dir, 'w') as f:
         json.dump(file_data, f)
 
-    return {'objectives': [file_data['opt_time_l'], file_data['large']['bi']['obj']]}
+    return {'objectives': [file_data['opt_time_l'], file_data['large']['tri']['obj']]}
 
 
 
@@ -272,7 +273,7 @@ def main():
     # nodes_dict = {}
     # for n1 in nodes1:
     #     for n2 in nodes2:
-    #         dir = f"./results/Models/scheduling_RegNN_{n1}_{n2}.json"
+    #         dir = f"./results/Models/integrated_RegNN_{n1}_{n2}.json"
     #         with open(dir, 'r+') as file:
     #             file_data = json.load(file)
     #         nodes_dict[(n1,n2)] = {
@@ -371,15 +372,15 @@ def main():
     history = opt.get_history()
     try:
         print(history)
-        text_file = open("results/Optima/surrogates_small_opt.txt", "w")
-        n = text_file.write(history)
+        text_file = open("results/Optima/surrogates_integr_small_opt.txt", "w")
+        n = text_file.write(str(history))
         text_file.close()
-    except:
-        print('Failed to save optima')
+    except Exception as e:
+        print('Failed to save optima: ', e)
 
     history.plot_pareto_front()
     plt.show()
-    plt.savefig('results/Figures/pareto_small.svg')
+    plt.savefig('results/Figures/pareto_integr_small.svg')
 
     # history.plot_hypervolumes(logy=True)
     # plt.show()
@@ -435,58 +436,58 @@ def main():
     # plt.show()
     # plt.savefig('results/Figures/hypervolume_medium2.svg')
 
-    space = sp.Space()
-    nodes1 = sp.Int("nodes1", 5, 80)
-    nodes2 = sp.Int("nodes2", 1, 40)
-    space.add_variables([nodes1, nodes2])
+    # space = sp.Space()
+    # nodes1 = sp.Int("nodes1", 5, 80)
+    # nodes2 = sp.Int("nodes2", 1, 40)
+    # space.add_variables([nodes1, nodes2])
 
-    opt = Optimizer(
-        large,
-        space,
-        num_objectives=2,
-        max_runs=12,
-        surrogate_type='gp',
-        acq_optimizer_type='random_scipy',
-        ref_point=[8000, 5],
-        time_limit_per_trial=8100,
-    )
     # opt = Optimizer(
-    #     small,
+    #     large,
     #     space,
     #     num_objectives=2,
-    #     max_runs=20,
-    #     surrogate_type='prf',
-    #     acq_optimizer_type='local_random',
-    #     ref_point=[905, 5],
-    #     time_limit_per_trial=900,
+    #     max_runs=12,
+    #     surrogate_type='gp',
+    #     acq_optimizer_type='random_scipy',
+    #     ref_point=[8000, 5],
+    #     time_limit_per_trial=8100,
     # )
-    history = opt.run()
-    # print(history)
+    # # opt = Optimizer(
+    # #     small,
+    # #     space,
+    # #     num_objectives=2,
+    # #     max_runs=20,
+    # #     surrogate_type='prf',
+    # #     acq_optimizer_type='local_random',
+    # #     ref_point=[905, 5],
+    # #     time_limit_per_trial=900,
+    # # )
+    # history = opt.run()
+    # # print(history)
     
-    history.plot_pareto_front()
-    plt.show()
-    plt.savefig('results/Figures/pareto_large1.svg')
+    # history.plot_pareto_front()
+    # plt.show()
+    # plt.savefig('results/Figures/pareto_integr_large1.svg')
 
-    history.plot_hypervolumes(logy=True)
-    plt.show()
-    plt.savefig('results/Figures/hypervolume_large1.svg')
+    # history.plot_hypervolumes(logy=True)
+    # plt.show()
+    # plt.savefig('results/Figures/hypervolume_integr_large1.svg')
 
-    history = opt.get_history()
-    try:
-        print(history)
-        text_file = open("results/Optima/surrogates_large_opt.txt", "w")
-        n = text_file.write(history)
-        text_file.close()
-    except:
-        print("Can't plot history for some reason")
+    # history = opt.get_history()
+    # try:
+    #     print(history)
+    #     text_file = open("results/Optima/surrogates_integr_large_opt.txt", "w")
+    #     n = text_file.write(str(history))
+    #     text_file.close()
+    # except Exception as e:
+    #     print("Can't plot history for some reason: ", e)
 
-    history.plot_pareto_front()
-    plt.show()
-    plt.savefig('results/Figures/pareto_large2.svg')
+    # history.plot_pareto_front()
+    # plt.show()
+    # plt.savefig('results/Figures/pareto_integr_large2.svg')
 
-    history.plot_hypervolumes(logy=True)
-    plt.show()
-    plt.savefig('results/Figures/hypervolume_large2.svg')
+    # history.plot_hypervolumes(logy=True)
+    # plt.show()
+    # plt.savefig('results/Figures/hypervolume_integr_large2.svg')
 
 
 if __name__=='__main__':

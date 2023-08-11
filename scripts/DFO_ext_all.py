@@ -74,9 +74,10 @@ def parallel_bi(P_set, X, data_, Production, t):
         res_Sch = scheduling_Asia(data_)
         changeover = pyo.value(res_Sch.CCH_cost)
         storage = pyo.value(res_Sch.st_cost)/20
+        
     except:
-        changeover = 100./12*1e6
-        storage = 10/12*1e6
+        changeover = 100./12
+        storage = 10/12
     # storage = pyo.value(res_Sch.CCH_cost)*24
 
     return changeover + storage
@@ -105,9 +106,9 @@ def parallel_tri(P_set, X, data_, Production, t):
                 res_Sch.energy_TI1[n] + res_Sch.energy_TI2[n] for n in res_Sch.N
             ))/12000
     except:
-        changeover = 100./12*1e6
-        storage = 10/12*1e6
-        energy = 10/12*1e6
+        changeover = 100./12
+        storage = 10/12
+        energy = 10/12
     # storage = pyo.value(res_Sch.CCH_cost)*24
 
     return changeover + storage + energy
@@ -592,7 +593,7 @@ data_copy[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
 res = centralised_planning(data_copy)
 t1 = time.time()
 f_actual = pyo.value(res.obj)
-print(f"Centralised planning objective in {t1-t0:.3f} seconds: {f_actual}")
+print(f"Centralised planning objective: {f_actual}")
 
 central_opt = {
         'x': None,
@@ -779,7 +780,7 @@ tri = dfo_tri_f(pybobyqa['x_best_so_far'][-1])
 t1 = time.time()
 bi_opt['tri'] = {'time': t1 - t0, 'obj': tri}
 
-with open('./results/optima/bi_Py-BOBYQA_all.json', 'w') as f:
+with open('./results/optima/bi_Py-BOBYQA_distr.json', 'w') as f:
     json.dump(bi_opt, f)
 
 
@@ -862,7 +863,7 @@ tri = dfo_tri_f(pybobyqa['x_best_so_far'][-1])
 t1 = time.time()
 tri_opt['tri'] = {'time': t1 - t0, 'obj': tri}
 
-with open('./results/optima/tri_Py-BOBYQA_all.json', 'w') as f:
+with open('./results/optima/tri_Py-BOBYQA.json', 'w') as f:
     json.dump(tri_opt, f)
 
 # s = 'CUATRO-l'

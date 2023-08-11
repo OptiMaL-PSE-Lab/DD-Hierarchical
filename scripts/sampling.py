@@ -20,7 +20,7 @@ k2 = {m: 0.065 for m in materials}
 max_duration = {m: scheduling_data[None]['Bmax'][m+'1']*scheduling_data[None]['beta'][m+'1'] for m in materials}
 
 
-def batch_reactor(conc, mat):
+def batch_reactor(conc, mat, log=False):
     m = pyo.ConcreteModel()
     m.t  = dae.ContinuousSet(bounds = (0,1))
     
@@ -82,12 +82,15 @@ def batch_reactor(conc, mat):
     #Piecewise Control ",
     discretizer.reduce_collocation_points(m, var = m.u , ncp =1, contset =m.t)
     
-    report = build_model_size_report(m)    
-    print('Num constraints:' , report.activated.constraints)    
-    print('Num variables: ', report.activated.variables)
+    if log:
+        report = build_model_size_report(m)    
+        print('Num constraints:' , report.activated.constraints)    
+        print('Num variables: ', report.activated.variables)
+        
     solver = pyo.SolverFactory('ipopt')
     solver.options['max_iter'] = 6000
-    results =  solver.solve(m,tee=False).write()
+    results =  solver.solve(m,tee=False)
+    # results =  solver.solve(m,tee=False).write()
     
     #Saving Data
     data = {v.getname(): dict() for v in m.component_objects(pyo.Var)}   

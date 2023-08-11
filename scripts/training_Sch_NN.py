@@ -217,13 +217,23 @@ def run_model(data_model, EPOCHS, nodes1, nodes2, model):
 def main(args):
 
     prod_list = [p for p in data[None]['P'][None] if p in scheduling_data[None]['states'][None]]
+    
+    dataset = args.data
 
-    try:
-        dir = './data/scheduling/scheduling'
-        df = pd.read_csv(dir)
-    except:
-        dir = '../data/scheduling/scheduling'
-        df = pd.read_csv(dir)
+    if dataset == 'scheduling':
+        try:
+            dir = './data/scheduling/scheduling'
+            df = pd.read_csv(dir)
+        except:
+            dir = '../data/scheduling/scheduling'
+            df = pd.read_csv(dir)
+    else:
+        try:
+            dir = './data/scheduling/scheduling_integr'
+            df = pd.read_csv(dir)
+        except:
+            dir = '../data/scheduling/scheduling_integr'
+            df = pd.read_csv(dir)
 
     inputs = [p for p in prod_list]
     outputs = ['cost']
@@ -271,8 +281,9 @@ def main(args):
         print(f"{model_type}: {res} in {t-t0:.3f} seconds")
 
         if SAVE:
-            dir = f"./results/Models/scheduling_{model_type}_{nodes1}_{nodes2}"
+            dir = f"./results/Models/{dataset}_{model_type}_{nodes1}_{nodes2}"
             save_NN(res[2], scaled_input_bounds, dir, res[0], res[1], t-t0)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run training")
@@ -281,10 +292,12 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=1000, help="Number of training epochs")
     parser.add_argument("--nodes1", type=int, default=50, help="Number of nodes in first hidden layer")
     parser.add_argument("--nodes2", type=int, default=20, help="Number of nodes in second hidden layer")
+    parser.add_argument("--data", type=str, default="scheduling", help="Dataset - 'scheduling', 'integrated'")
     parser.add_argument("--save", type=bool, default=False, help="Flag indicating if model(s) should get saved")
 
     args = parser.parse_args()
     main(args)
+
 
 # plt.scatter(y_test_cl, y_pred_test_cl, c='r')
 # plt.scatter(y_train_cl, y_pred_train_cl, c='k')

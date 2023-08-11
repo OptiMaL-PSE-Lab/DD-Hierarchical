@@ -33,10 +33,10 @@ from data.planning.planning_sch_bilevel_lowdim import data, scheduling_data
 prod_list = [p for p in data[None]['P'][None] if p in scheduling_data[None]['states'][None]]
 
 try:
-    dir = './data/scheduling/scheduling'
+    dir = './data/scheduling/scheduling_integr'
     df = pd.read_csv(dir) 
 except:
-    dir = '../data/scheduling/scheduling'
+    dir = '../data/scheduling/scheduling_integr'
     df = pd.read_csv(dir) 
 
 inputs = prod_list
@@ -184,9 +184,9 @@ def centralised_all(data, fix_TP=False, size='small', regression_type='NN', clas
     if regression_type == 'NN':
         if nodes is not None:
             node1, node2 = nodes
-            dir = f"./results/Models/scheduling_RegNN_{node1}_{node2}.onnx"
+            dir = f"./results/Models/integrated_RegNN_{node1}_{node2}.onnx"
         else:
-            dir = './results/Models/scheduling_RegNN.onnx'
+            dir = './results/Models/integrated_RegNN.onnx'
         try:
             onnx_model = onnx.load(dir)
         except:

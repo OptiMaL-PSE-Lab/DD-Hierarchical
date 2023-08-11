@@ -1,0 +1,9 @@
+#PBS -l walltime=18:00:00
+#PBS -l select=1:ncpus=256:mem=25gb
+
+module load anaconda3/personal
+source activate DDH
+
+cd $PBS_O_WORKDIR
+python DFO_ext_all.py
+

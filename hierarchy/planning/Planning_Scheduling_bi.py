@@ -343,13 +343,15 @@ def centralised(data, fix_TP=False):
 
     # solver = pyo.SolverFactory("mosek")
     # solver = pyo.SolverFactory("bonmin")
-    solver = pyo.SolverFactory("gurobi_direct")
+
+    # solver = pyo.SolverFactory("gurobi_direct")
+    solver = pyo.SolverFactory("gurobi")
     solver.solve(ins)
 
     return ins
 
 
-def scheduling_Asia(data, tightened=True):
+def scheduling_Asia(data, tightened=True, res_out=False):
 
     model = pyo.AbstractModel()
     model.N = pyo.Set()
@@ -379,7 +381,6 @@ def scheduling_Asia(data, tightened=True):
     model.Ts = pyo.Var(model.I, model.N, within=pyo.NonNegativeReals)
     model.Tf = pyo.Var(model.I, model.N, within=pyo.NonNegativeReals)
     model.D = pyo.Var(model.I, model.N, within=pyo.NonNegativeReals)
-    
     model.T_CCH = pyo.Var(model.I, model.N, within=pyo.NonNegativeReals)
     model.Ws = pyo.Var(model.I, model.N, within=pyo.Binary)
     # model.Wp = pyo.Var(model.I, model.N, within=pyo.Binary)
@@ -590,7 +591,10 @@ def scheduling_Asia(data, tightened=True):
     # solver.options['TimeLimit'] = 60.
     res = solver.solve(ins)
 
-    return ins
+    if not res_out:
+        return ins
+    else:
+        return ins, res
 
 def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
     

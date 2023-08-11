@@ -1321,7 +1321,7 @@ def scheduling_Asia_bi_complete(data, tightened=True):
     model.c_storage = pyo.Constraint(rule=constr_storage)
 
     solver = pyo.SolverFactory("gurobi_direct")
-    # solver.options['TimeLimit'] = 60.
+    # solver.options['TimeLimit'] = 300.
     res = solver.solve(model)
 
     return model
@@ -1442,13 +1442,6 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
             )
     return Storage, Demand
 
-# plt.rcParams["font.family"] = "Times New Roman"
-# ft = int(13)
-# font = {'size': ft}
-# plt.rc('font', **font)
-# params = {'legend.fontsize': 12.5,
-#               'legend.handlelength': 2}
-# plt.rcParams.update(params)
 
 # Nt=5
 # import_data[None].update({'N_t': {None: Nt}, 'Tc': {None: np.arange(1, 1+Nt)}})
@@ -1585,9 +1578,9 @@ def simulate(Production, TP, Forecast, Sales, data, seed=0, random=True):
 
 # labels = ['Machine 1', 'Machine 2']
 # plt.yticks([0, 1], labels=labels)
-# # plt.show()
-# # plt.clf()
-# plt.savefig('results/Figures/x0_sch_ctrl_all.svg')
+# plt.show()
+# plt.clf()
+# # plt.savefig('test.png')
 
-# # ## 
+# ## 
 

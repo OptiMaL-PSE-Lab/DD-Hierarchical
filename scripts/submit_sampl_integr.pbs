@@ -1,0 +1,9 @@
+#PBS -l walltime=07:30:00
+#PBS -l select=1:ncpus=64:mem=10gb
+
+module load anaconda3/personal
+source activate DDH
+
+cd $PBS_O_WORKDIR
+python sampling_integrated.py
+

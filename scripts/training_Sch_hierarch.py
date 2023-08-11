@@ -2,6 +2,9 @@ import warnings
 import argparse
 import time
 import multiprocessing as mp
+
+import json
+
 # from time import perf_counter, sleep
 # import matplotlib.pyplot as plt
 import numpy as np
@@ -15,10 +18,15 @@ import lightgbm as lgb
 
 from functools import partial
 
+from omlt.io import write_onnx_model_with_bounds
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, accuracy_score
 
 from torch.utils.data import DataLoader, TensorDataset
+
+from onnxmltools.convert.lightgbm.convert import convert
+from skl2onnx.common.data_types import FloatTensorType
 
 # from omlt.io import (
 #     write_onnx_model_with_bounds, 
@@ -66,9 +74,54 @@ def moving_average(array, N_av=10):
         dummy[i] = np.mean(array[i - min(9, i):i+1])
     return dummy
 
-def classNN(data_model, EPOCHS):
+def save_NN(model, scaled_bounds, dir, train_sc, test_sc, train_t):
+    x = torch.randn(32, 4)
+    try:
+        model.forward(x)
+        torch.onnx.export(
+            model,
+            x,
+            dir+'.onnx',
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'},
+            }
+        )
+        print(f"Wrote PyTorch model to {dir+'.onnx'}")
+    except:
+        model.forward(x)
+        torch.onnx.export(
+            model,
+            x,
+            '.'+dir+'.onnx',
+            input_names=['input'],
+            output_names=['output'],
+            dynamic_axes={
+                'input': {0: 'batch_size'},
+                'output': {0: 'batch_size'},
+            }
+        )
+        print(f"Wrote PyTorch model to {'.'+dir+'.onnx'}")
+    write_onnx_model_with_bounds(dir, None, scaled_bounds)
+
+    save_obj = {
+    'train_score': train_sc,
+    'test_score': test_sc,
+    'train_time': train_t,
+    # 'opt_time_S': None,
+    # 'opt_time_M': None,
+    # 'opt_time_L': None, 
+    }
+    json.encoder.FLOAT_REPR = lambda o: format(o, '.6f')
+    with open(dir+'.json', 'w') as f:
+        json.dump(save_obj, f)
+    
+
+def classNN(data_model, EPOCHS, nodes1, nodes2):
     X_train, X_test, y_train, y_test = data_model
-    model = Net2(50,20)
+    model = Net2(nodes1,nodes2)
     criterion = nn.BCEWithLogitsLoss(reduction='sum')
     # optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
@@ -106,12 +159,12 @@ def classNN(data_model, EPOCHS):
     train_accuracy = np.sum(np.round(torch.sigmoid(y_train_pred).detach().numpy())==np.round(y_train))/len(y_train)
     # print(f"Training accuracy: {train_accuracy}, Test accuracy: {test_accuracy}")
 
-    return test_accuracy, model
+    return train_accuracy, test_accuracy, model
 
-def regNN(data_model, EPOCHS):
+def regNN(data_model, EPOCHS, nodes1, nodes2):
     X_train, X_test, y_train, y_test = data_model
     # model = Net(5, 5)
-    model = Net(50, 20)
+    model = Net(nodes1, nodes2)
     loss_function = nn.MSELoss(reduction='sum')
     optimizer = torch.optim.Adam(model.parameters(),lr=0.005)
     # optimizer = torch.optim.Adam(model.parameters(),lr=0.01)
@@ -145,99 +198,33 @@ def regNN(data_model, EPOCHS):
     # plt.show()
 
     mse_relu_train = mean_squared_error(y_train, y_pred_train.detach().numpy())       
-    # print('mse relu in the training set %.6f' %mse_relu_train)
+    print('mse relu in the training set %.6f' %mse_relu_train)
     mse_relu_test = mean_squared_error(y_test, y_pred_test.detach().numpy())       
-    # print('mse relu in the test set %.6f' %mse_relu_test)
+    print('mse relu in the test set %.6f' %mse_relu_test)
 
-    return mse_relu_test, model
+    return mse_relu_train, mse_relu_test, model
 
-def regTree(data_model):
-    X_train, X_test, y_train, y_test = data_model
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        PARAMS = {
-            'objective': 'regression',
-            'metric': 'mse',
-            'boosting': 'gbdt',
-            'num_trees': 50,
-            'max_depth': 3,
-            'min_data_in_leaf': 2,
-            'random_state': 100,
-            'verbose': -1
-            }
-        train_data = lgb.Dataset(X_train, 
-                                 label=y_train,
-                                 params={'verbose': -1})
-        model = lgb.train(PARAMS, 
-                          train_data,
-                          verbose_eval=False)
-
-    y_pred_train = model.predict(X_train)
-    y_pred_test = model.predict(X_test)
-    mse_train = mean_squared_error(y_train, y_pred_train)
-    mse_test = mean_squared_error(y_test, y_pred_test)
-    # print(f"LGB regression MSE: Training: {mse_train}, Testing: {mse_test}")
-
-    return mse_test, model
-
-def classTree(data_model):
-    X_train, X_test, y_train_cl, y_test_cl = data_model
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        PARAMS = {
-            'objective': 'binary',
-            'metric': 'binary_logloss',
-        'boosting': 'gbdt',
-        'num_trees': 50,
-        'max_depth': 3,
-        'min_data_in_leaf': 2,
-        'random_state': 100,
-        'verbose': -1
-        }
-        
-        train_data = lgb.Dataset(X_train, 
-                             label=y_train_cl,
-                             params={'verbose': -1})
-        model = lgb.train(PARAMS, 
-                      train_data,
-                      verbose_eval=False)
-
-    y_pred_train_cl = model.predict(X_train)
-    y_pred_test_cl = model.predict(X_test)
-    y_pred_test_cl1 =  np.round(y_pred_test_cl)
-    ac_train = accuracy_score(y_train_cl, np.round(y_pred_train_cl))
-    ac_test = accuracy_score(y_test_cl, np.round(y_pred_test_cl))
-    # print(f"LGB classification accuracy: Training: {ac_train}, Testing: {ac_test}")
-
-    return ac_test, model
-
-def run_model(data_model, EPOCHS, model):
-    dfin, dfout, dfout_class = data_model
-    if model == 'RegTree':
-        data_next = train_test_split(dfin.values, dfout.values, test_size=0.15, random_state=8, shuffle=True)
-        res = regTree(data_next)
-    elif model == 'ClassTree':
-        data_next = train_test_split(dfin.values, dfout_class.values, test_size=0.15, random_state=8, shuffle=True)
-        res = classTree(data_next)
-    elif model == 'RegNN':
-        data_next = train_test_split(dfin.values, dfout.values, test_size=0.15, random_state=8, shuffle=True)
-        res = regNN(data_next, EPOCHS)
-    else: 
-        data_next = train_test_split(dfin.values, dfout_class.values, test_size=0.15, random_state=8, shuffle=True)
-        res = classNN(data_next, EPOCHS)
+def run_model(data_model, EPOCHS, nodes1, nodes2, model):
+    dfin_scaled, dfout_scaled, dfout_class = data_model
+    if model == 'RegNN':
+        data_next = train_test_split(dfin_scaled.values, dfout_scaled.values, test_size=0.15, random_state=8, shuffle=True)
+        res = regNN(data_next, EPOCHS, nodes1, nodes2)
+    elif model == 'ClassNN': 
+        data_next = train_test_split(dfin_scaled.values, dfout_class.values, test_size=0.15, random_state=8, shuffle=True) #### ClassNN <- used dfin rather than dfin_scaled?
+        res = classNN(data_next, EPOCHS, nodes1, nodes2)
     return res
 
 def main(args):
 
     prod_list = [p for p in data[None]['P'][None] if p in scheduling_data[None]['states'][None]]
+    
+    dataset = 'hierarch'
 
     try:
-        dir = './data/scheduling/scheduling'
+        dir = './data/scheduling/scheduling_hierarch'
         df = pd.read_csv(dir)
     except:
-        dir = '../data/scheduling/scheduling'
+        dir = '../data/scheduling/scheduling_hierarch'
         df = pd.read_csv(dir)
 
     inputs = [p for p in prod_list]
@@ -259,8 +246,8 @@ def main(args):
     y_offset, y_factor = dfout.mean().to_dict(), dfout.std().to_dict()
     # y_off_class, y_fac_class = dfout_class.mean().to_dict(), dfout_class.std().to_dict()
 
-    dfin = (dfin - dfin.mean()).divide(dfin.std())
-    dfout = (dfout - dfout.mean()).divide(dfout.std())
+    dfin_scaled = (dfin - dfin.mean()).divide(dfin.std())
+    dfout_scaled = (dfout - dfout.mean()).divide(dfout.std())
     # dfout_class = (dfout_class - dfout_class.mean()).divide(dfout_class.std())
 
     #Save the scaling parameters of the inputs for OMLT
@@ -272,9 +259,12 @@ def main(args):
 
     model_type = args.model
     EPOCHS = args.epochs
-    data_model = dfin, dfout, dfout_class
+    SAVE = args.save
+    nodes1 = args.nodes1
+    nodes2 = args.nodes2
+    data_model = dfin_scaled, dfout_scaled, dfout_class
 
-    wrapper = partial(run_model, data_model, EPOCHS)
+    wrapper = partial(run_model, data_model, EPOCHS, nodes1, nodes2)
 
     if model_type != 'all':
         t0 = time.perf_counter()
@@ -282,24 +272,24 @@ def main(args):
         t = time.perf_counter()
         print(f"{model_type}: {res} in {t-t0:.3f} seconds")
 
-    else:
-        t0 = time.perf_counter()
-        pool = mp.Pool(4)
-        res = pool.map(wrapper, ['RegTree', 'ClassTree', 'RegNN', 'ClassNN'])
-        t = time.perf_counter()
-        print(res)
-        print(f"in {(t-t0)/60:.3f} min")
-
+        if SAVE:
+            dir = f"./results/Models/{dataset}_{model_type}_{nodes1}_{nodes2}"
+            save_NN(res[2], scaled_input_bounds, dir, res[0], res[1], t-t0)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run training")
 
-    parser.add_argument("--model", type=str, default="all", help = "Model to be trained - 'all', 'RegNN', 'ClassNN', 'RegTree', 'ClassTree'")
+    parser.add_argument("--model", type=str, default="RegNN", help = "Model to be trained - 'RegNN', 'ClassNN'")
     parser.add_argument("--epochs", type=int, default=1000, help="Number of training epochs")
+    parser.add_argument("--nodes1", type=int, default=50, help="Number of nodes in first hidden layer")
+    parser.add_argument("--nodes2", type=int, default=20, help="Number of nodes in second hidden layer")
+    # parser.add_argument("--data", type=str, default="scheduling", help="Dataset - 'scheduling', 'integrated'")
+    parser.add_argument("--save", type=bool, default=False, help="Flag indicating if model(s) should get saved")
 
     args = parser.parse_args()
     main(args)
+
 
 # plt.scatter(y_test_cl, y_pred_test_cl, c='r')
 # plt.scatter(y_train_cl, y_pred_train_cl, c='k')

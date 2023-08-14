@@ -17,9 +17,9 @@ The repository is divided into the data, hierarchy, results, and scripts folders
 
 - ## Worflows
 
-- Sampling the optimization problems to create optimality surrogates: sampling.py (control), sampling_Sch.py (scheduling), sampling_integrated.py (scheduling with control surrogate), sampling_hierarch.py (sequential scheduling and control)
-- Training optimality surrogates on a range of planning/scheduling setpoints on the sampling_*.py samples stored in data: training.py, training_Sch.py, training_Sch_NN.py, training_Sch_hierarch.py
-- Sampling the hierarchical tri-level evaluation for a given planning-level solution: sample_real___.py
-- Hyperparameter tuning of and tri-level optimization with optimality surrogates: surrogate_pareto.py (scheduling-only), surrogate_integr_pareto1.py, surrogate_integr_pareto2.py (scheduling-approximate control), surrogate_hierarch_pareto.py (sequential scheduling-control)
-- DFO: on the planning, planning-scheduling and planning-scheduling-approximate control problems on a simplified, simplified but parallelized, and the full parallelized case study: DFO_ext_lowdim.py, DFO_ext_lowdim_parallel.py, DFO_ext_all.py; on the hierarchical tri-level planning-scheduling-control from the planning-only, planning-scheduling, planning-scheduling-approximate control DFO solutions and the surrogate solutions: DFO_real_init.py, DFO_real_bi.py, DFO_real_.py, DFO_real_surr.py
-- Plotting: save_optima_data.py saves the results in a dataformatused in plot_optima.py to create all plots to support the work
+- Sampling the optimization problems to create optimality surrogates: `sampling.py` (control), `sampling_Sch.py` (scheduling), `sampling_integrated.py` (scheduling with control surrogate), `sampling_hierarch.py` (sequential scheduling and control)
+- Training optimality surrogates on a range of planning/scheduling setpoints on the sampling_*.py samples stored in data: `training.py`, `training_Sch.py`, `training_Sch_NN.py`, `training_Sch_hierarch.py`
+- Sampling the hierarchical tri-level evaluation for a given planning-level solution: `sample_real___.py`
+- Hyperparameter tuning of and tri-level optimization with optimality surrogates: `surrogate_pareto.py` (scheduling-only), `surrogate_integr_pareto1.py`, `surrogate_integr_pareto2.py` (scheduling-approximate control), `surrogate_hierarch_pareto.py` (sequential scheduling-control)
+- DFO: on the planning, planning-scheduling and planning-scheduling-approximate control problems on a simplified, simplified but parallelized, and the full parallelized case study: `DFO_ext_lowdim.py`, `DFO_ext_lowdim_parallel.py`, `DFO_ext_all.py`; on the hierarchical tri-level planning-scheduling-control from the planning-only, planning-scheduling, planning-scheduling-approximate control DFO solutions and the surrogate solutions: `DFO_real_init.py`, `DFO_real_bi.py`, `DFO_real_.py`, `DFO_real_surr.py`
+- Plotting: `save_optima_data.py` saves the results in a dataformatused in `plot_optima.py` to create all plots to support the work

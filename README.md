@@ -4,7 +4,7 @@ This repository supports the 'Hierarchical Planning-Scheduling-Control - Derivat
 
 ## Installation and dependencies
 
- Using 'conda env create --file environment.yml' will recreate an environment with the required dependencies.
+ Using `conda env create --file environment.yml` will recreate an environment with the required dependencies.
 
 ## Using the repository
 

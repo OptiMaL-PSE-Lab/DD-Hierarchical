@@ -15,7 +15,7 @@ The repository is divided into the data, hierarchy, results, and scripts folders
 - results: Contains the DFO and optimality surrogate results, trained optimality surrogates, and result plots
 - scripts: Contains all the scripts from scheduling and control optimization sampling, to surrogate training, tri-level optimization (with the .pbs scripts to give an idea of the required resources) and plotting
 
-- ## Worflows
+## Worflows
 
 - Sampling the optimization problems to create optimality surrogates: `sampling.py` (control), `sampling_Sch.py` (scheduling), `sampling_integrated.py` (scheduling with control surrogate), `sampling_hierarch.py` (sequential scheduling and control)
 - Training optimality surrogates on a range of planning/scheduling setpoints on the sampling_*.py samples stored in data: `training.py`, `training_Sch.py`, `training_Sch_NN.py`, `training_Sch_hierarch.py`

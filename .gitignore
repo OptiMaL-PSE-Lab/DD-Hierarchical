@@ -2,6 +2,7 @@
 *.db
 *.log
 *.pyc
+*.pbs
 *.onnx
 *.cpython-38.pyc
 *.egg-info
